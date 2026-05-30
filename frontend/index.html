@@ -17,19 +17,17 @@
       <h1>📍 SiteScout</h1>
       <p class="subtitle">Web GIS Ekspansi Cabang</p>
     </div>
+    <div class="toolbar">
+      <button id="btn-save-config" class="toolbar-btn" title="Simpan Konfigurasi">💾</button>
+      <button id="btn-load-config" class="toolbar-btn" title="Muat Konfigurasi">📂</button>
+      <button id="btn-custom-bisnis" class="toolbar-btn" title="Buat Jenis Usaha Baru">➕</button>
+    </div>
     <div class="step-section">
       <div class="step-label">Langkah 1 — Pilih Jenis Usaha</div>
-      <select id="bisnis-select">
-        <option value="">— Pilih jenis usaha —</option>
-        <option value="apotek">💊 Apotek</option>
-        <option value="minimarket">🏪 Minimarket</option>
-        <option value="restoran">🍽️ Restoran</option>
-        <option value="klinik">🏥 Klinik</option>
-        <option value="kantor">🏢 Kantor</option>
-      </select>
+      <select id="bisnis-select"><option value="">— Pilih jenis usaha —</option></select>
     </div>
     <div id="variable-section" class="step-section" style="display:none;">
-      <div class="step-label">Langkah 2 — Atur Variabel</div>
+      <div class="step-label">Langkah 2 — Atur Variabel & Bobot</div>
       <div id="variabel-container"></div>
     </div>
     <div id="generate-section" class="step-section" style="display:none;">
@@ -38,19 +36,36 @@
     <div id="results-section" class="step-section" style="display:none;">
       <div class="step-label">Hasil Analisis</div>
       <div id="results-summary"></div>
-      <button id="btn-export" class="btn-secondary">📥 Export Titik Potensial (CSV)</button>
+      <button id="btn-export-csv" class="btn-secondary">📥 Export CSV</button>
+      <button id="btn-export-geojson" class="btn-secondary">🗺️ Export GeoJSON</button>
       <button id="btn-reset" class="btn-reset">↺ Reset Titik</button>
     </div>
   </div>
   <div id="map"></div>
   <div id="legend">
     <div class="legend-title">Skor Kesesuaian</div>
-    <div class="legend-item"><span class="legend-color" style="background:#1a9850"></span>Sangat Sesuai</div>
-    <div class="legend-item"><span class="legend-color" style="background:#91cf60"></span>Sesuai</div>
-    <div class="legend-item"><span class="legend-color" style="background:#fee08b"></span>Cukup</div>
-    <div class="legend-item"><span class="legend-color" style="background:#fc8d59"></span>Kurang Sesuai</div>
-    <div class="legend-item"><span class="legend-color" style="background:#d73027"></span>Tidak Sesuai</div>
+    <div class="legend-item"><span class="legend-color" style="background:#1a9850"></span>Sangat Sesuai (80-100%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:#91cf60"></span>Sesuai (60-80%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fee08b"></span>Cukup (40-60%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fc8d59"></span>Kurang Sesuai (20-40%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:#d73027"></span>Tidak Sesuai (0-20%)</div>
   </div>
+  <!-- Custom Modal -->
+  <div id="custom-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="modal-close" id="modal-close">&times;</span>
+      <h2>Buat Jenis Usaha Baru</h2>
+      <div class="form-group"><label>Nama Bisnis</label><input type="text" id="custom-name" placeholder="Contoh: Laundry" /></div>
+      <div class="form-group"><label>Icon</label><input type="text" id="custom-icon" placeholder="🧺" maxlength="2" /></div>
+      <div id="custom-variables">
+        <div class="step-label">Kelompok Variabel</div>
+        <div id="custom-groups"></div>
+        <button id="btn-add-group" class="btn-small">+ Tambah Kelompok</button>
+      </div>
+      <button id="btn-save-custom" class="btn-primary" style="margin-top:12px">Simpan</button>
+    </div>
+  </div>
+  <input type="file" id="file-input" accept=".json" style="display:none" />
   <script src="js/variables.js"></script>
   <script src="js/analysis.js"></script>
   <script src="js/data.js"></script>
