@@ -3,11 +3,11 @@
 
 function getScoreColor(score) {
   const colors = [
-    { min: 0.8, color: '#1a9850', label: 'Sangat Sesuai' },
-    { min: 0.6, color: '#91cf60', label: 'Sesuai' },
-    { min: 0.4, color: '#fee08b', label: 'Cukup' },
-    { min: 0.2, color: '#fc8d59', label: 'Kurang Sesuai' },
-    { min: 0, color: '#d73027', label: 'Tidak Sesuai' }
+    { min: 0.8, color: '#4fffb0', label: 'Sangat Sesuai' },
+    { min: 0.6, color: '#88d66c', label: 'Sesuai' },
+    { min: 0.4, color: '#ffd166', label: 'Cukup' },
+    { min: 0.2, color: '#ff8a5b', label: 'Kurang Sesuai' },
+    { min: 0, color: '#ff5f6d', label: 'Tidak Sesuai' }
   ];
   for (const c of colors) {
     if (score >= c.min) return c;
@@ -63,19 +63,22 @@ function generateGrid(bounds, cellSize = 0.003) {
   const grid = [];
   for (let lat = bounds[0][0]; lat < bounds[1][0]; lat += cellSize) {
     for (let lng = bounds[0][1]; lng < bounds[1][1]; lng += cellSize) {
+      const north = Math.min(lat + cellSize, bounds[1][0]);
+      const east = Math.min(lng + cellSize, bounds[1][1]);
       const corners = [
         [lng, lat],
-        [lng, lat + cellSize],
-        [lng + cellSize, lat + cellSize],
-        [lng + cellSize, lat],
+        [lng, north],
+        [east, north],
+        [east, lat],
         [lng, lat]
       ];
       grid.push({
         type: 'Feature',
         properties: {
           id: `cell_${lat.toFixed(4)}_${lng.toFixed(4)}`,
-          center_lat: lat + cellSize / 2,
-          center_lng: lng + cellSize / 2,
+          bbox: [lng, lat, east, north],
+          center_lat: lat + (north - lat) / 2,
+          center_lng: lng + (east - lng) / 2,
           score: 0
         },
         geometry: { type: 'Polygon', coordinates: [corners] }
@@ -83,6 +86,69 @@ function generateGrid(bounds, cellSize = 0.003) {
     }
   }
   return grid;
+}
+
+function enrichGridWithPOIMetrics(gridCells, poiRows, bounds, cellSize) {
+  const latMin = bounds[0][0];
+  const lngMin = bounds[0][1];
+  const latMax = bounds[1][0];
+  const lngMax = bounds[1][1];
+  const columns = Math.ceil((lngMax - lngMin) / cellSize);
+  const poiCoords = [];
+
+  for (const cell of gridCells) {
+    cell.properties.poi_count = 0;
+    cell.properties.nearest_km = 10;
+  }
+
+  for (const row of poiRows) {
+    const lat = Number(row.latitude);
+    const lng = Number(row.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < latMin || lat > latMax || lng < lngMin || lng > lngMax) continue;
+
+    poiCoords.push({ lat, lng });
+    const rowIndex = Math.min(Math.floor((lat - latMin) / cellSize), Math.ceil((latMax - latMin) / cellSize) - 1);
+    const colIndex = Math.min(Math.floor((lng - lngMin) / cellSize), columns - 1);
+    const cell = gridCells[rowIndex * columns + colIndex];
+    if (cell) cell.properties.poi_count += 1;
+  }
+
+  if (poiCoords.length === 0) return gridCells;
+
+  for (const cell of gridCells) {
+    const centerLat = cell.properties.center_lat;
+    const centerLng = cell.properties.center_lng;
+    let minDist = 10;
+
+    for (const poi of poiCoords) {
+      const d = distanceKm(centerLat, centerLng, poi.lat, poi.lng);
+      if (d < minDist) minDist = d;
+    }
+
+    cell.properties.nearest_km = minDist;
+  }
+
+  return gridCells;
+}
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function toRadians(value) {
+  return value * Math.PI / 180;
+}
+
+function pointInCell(lat, lng, cell) {
+  const b = cell.properties.bbox;
+  return lng >= b[0] && lng <= b[2] && lat >= b[1] && lat <= b[3];
 }
 
 // === DUMMY DATA ===

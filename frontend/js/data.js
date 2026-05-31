@@ -5,7 +5,7 @@ const SUPABASE_URL = 'https://vtwolnilfejqlbjftspk.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_nqP5SriCUsp-VssEmcsHZg_p0SEpIY_'
 
 async function fetchFromSupabase(endpoint, params = {}) {
-  const query = new URLSearchParams(params)
+  const query = typeof params === 'string' ? params : new URLSearchParams(params).toString()
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}?${query}`
   const res = await fetch(url, {
     headers: {
@@ -18,7 +18,6 @@ async function fetchFromSupabase(endpoint, params = {}) {
 }
 
 async function loadSpatialData() {
-  console.log('📡 Data loader ready — connected to Supabase')
   return true
 }
 
@@ -93,10 +92,9 @@ async function loadZoningInBounds(bounds) {
 async function loadPOIByCategory(kategori) {
   const data = await fetchFromSupabase('jakarta_poi', {
     select: 'id,nama,kategori,latitude,longitude',
-    kategori: `ilike.*${encodeURIComponent(kategori)}*`,
+    kategori: `ilike.*${kategori}*`,
     limit: '5000'
   })
-  console.log(`📊 POI "${kategori}": ${data.length} titik`)
   return data.map(d => ({
     type: 'Feature',
     properties: { id: d.id, nama: d.nama, kategori: d.kategori },
@@ -104,28 +102,29 @@ async function loadPOIByCategory(kategori) {
   }))
 }
 
-// Count POI in each grid cell using Turf.js
+// Count POI in each grid cell using the lightweight grid helpers.
 function countPOIPerCell(gridCells, poiFeatures, radiusKm = 0.5) {
   if (!poiFeatures || poiFeatures.length === 0) return gridCells
-  
-  const poiCollection = { type: 'FeatureCollection', features: poiFeatures }
-  
+  const poiRows = poiFeatures.map(feature => ({
+    latitude: feature.geometry.coordinates[1],
+    longitude: feature.geometry.coordinates[0]
+  }))
+
   return gridCells.map(cell => {
-    const center = turf.centerOfMass(cell)
-    const ptsWithin = turf.pointsWithinPolygon(poiCollection, cell)
-    const nearby = turf.pointsWithinPolygon(poiCollection, turf.buffer(cell, radiusKm, {units: 'kilometers'}))
-    
-    cell.properties.poi_count = ptsWithin.features.length
-    cell.properties.poi_nearby = nearby.features.length
-    
-    // Find nearest POI distance
+    let poiCount = 0
+    let poiNearby = 0
     let minDist = Infinity
-    for (const p of poiFeatures) {
-      const d = turf.distance(center, p, {units: 'kilometers'})
+
+    for (const p of poiRows) {
+      if (pointInCell(p.latitude, p.longitude, cell)) poiCount++
+      const d = distanceKm(cell.properties.center_lat, cell.properties.center_lng, p.latitude, p.longitude)
+      if (d <= radiusKm) poiNearby++
       if (d < minDist) minDist = d
     }
+
+    cell.properties.poi_count = poiCount
+    cell.properties.poi_nearby = poiNearby
     cell.properties.nearest_poi_km = minDist === Infinity ? 5 : minDist
-    
     return cell
   })
 }
