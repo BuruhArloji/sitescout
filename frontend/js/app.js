@@ -151,6 +151,11 @@ function renderVariables(config) {
 // ===== GENERATE =====
 document.getElementById('btn-generate').addEventListener('click', async function() {
   if (!currentBisnis || isAnalyzing) return;
+  console.log('🚀 Generate clicked for:', currentBisnis);
+  console.log('userVariables:', userVariables);
+  console.log('userWeights:', userWeights);
+  console.log('userGroupWeights:', userGroupWeights);
+  console.log('turf available:', typeof turf !== 'undefined');
   isAnalyzing = true;
   this.textContent = '⏳ Menganalisis...';
   this.disabled = true;
@@ -164,13 +169,19 @@ document.getElementById('btn-generate').addEventListener('click', async function
 
     scoredCells = gridCells.map(cell => {
       const score = calculateScore(cell, userVariables, userWeights, userGroupWeights, currentBisnis);
-      const center = turf.centerOfMass(cell);
-      const nearby = allPOIData.filter(p => turf.distance(center, p, {units:'kilometers'}) < 0.5);
-      const boost = Math.min(0.15, nearby.length * 0.02);
+      let boost = 0;
+      try {
+        if (typeof turf !== 'undefined') {
+          const center = turf.centerOfMass(cell);
+          const nearby = allPOIData.filter(p => turf.distance(center, p, {units:'kilometers'}) < 0.5);
+          boost = Math.min(0.15, nearby.length * 0.02);
+          cell.properties.nearby_pois = nearby.length;
+        }
+      } catch(e) { console.warn('Turf error:', e); }
       cell.properties.score = Math.min(1, score + boost);
-      cell.properties.nearby_pois = nearby.length;
       return cell;
     });
+    console.log('Scored cells:', scoredCells.length, 'avg score:', (scoredCells.reduce((s,c)=>s+c.properties.score,0)/scoredCells.length*100).toFixed(1)+'%');
 
     renderScoreMap(scoredCells);
     updateResults();
