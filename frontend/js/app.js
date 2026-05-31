@@ -15,7 +15,11 @@ let layerVisibility = {
   planningGrid: true,
   scoreHeatmap: true,
   selectedSites: true,
-  legend: true
+  legend: true,
+  rawPointApotek: false,
+  rawPointMinimarket: false,
+  rawLineJalan: false,
+  rawPolygonZonasi: false
 };
 
 const DEFAULT_BOUNDS = [[-6.37, 106.68], [-6.08, 106.98]];
@@ -28,8 +32,54 @@ const COMPETITOR_CATEGORY = {
   kantor: 'Kantor'
 };
 
+const RAW_LAYER_CONFIG = {
+  rawPointApotek: {
+    checkboxId: 'layer-raw-point-apotek',
+    label: 'Apotek',
+    pane: 'rawPointPane',
+    geometry: 'point',
+    color: '#57ffac',
+    loader: () => loadRawPOILayer('Apotek')
+  },
+  rawPointMinimarket: {
+    checkboxId: 'layer-raw-point-minimarket',
+    label: 'Minimarket',
+    pane: 'rawPointPane',
+    geometry: 'point',
+    color: '#4ea1ff',
+    loader: () => loadRawPOILayer('Minimarket')
+  },
+  rawLineJalan: {
+    checkboxId: 'layer-raw-line-jalan',
+    label: 'Jalan',
+    pane: 'rawLinePane',
+    geometry: 'line',
+    color: '#ffd166',
+    loader: loadRawRoadLayer
+  },
+  rawPolygonZonasi: {
+    checkboxId: 'layer-raw-polygon-zonasi',
+    label: 'Zonasi',
+    pane: 'rawPolygonPane',
+    geometry: 'polygon',
+    color: '#ff7f50',
+    loader: loadRawZoningLayer
+  }
+};
+
+const rawLayerState = Object.keys(RAW_LAYER_CONFIG).reduce((acc, key) => {
+  acc[key] = { layer: null, loading: false };
+  return acc;
+}, {});
+
 function initMap() {
   map = L.map('map', { center: [-6.22, 106.83], zoom: 12 });
+  map.createPane('rawPolygonPane');
+  map.getPane('rawPolygonPane').style.zIndex = 355;
+  map.createPane('rawLinePane');
+  map.getPane('rawLinePane').style.zIndex = 365;
+  map.createPane('rawPointPane');
+  map.getPane('rawPointPane').style.zIndex = 375;
   map.createPane('planningGridPane');
   map.getPane('planningGridPane').style.zIndex = 430;
 
@@ -334,12 +384,209 @@ function hidePlanningGridOverlay() {
   if (overlay) overlay.innerHTML = '';
 }
 
+async function loadRawPOILayer(categoryLabel) {
+  const rows = await fetchFromSupabase('jakarta_poi', {
+    select: 'id,nama,kategori,latitude,longitude',
+    kategori: 'ilike.*' + categoryLabel + '*',
+    limit: '5000'
+  });
+
+  const features = rows
+    .map(row => {
+      const lat = Number(row.latitude);
+      const lng = Number(row.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return {
+        type: 'Feature',
+        properties: {
+          id: row.id,
+          nama: row.nama || '',
+          kategori: row.kategori || categoryLabel
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [lng, lat]
+        }
+      };
+    })
+    .filter(Boolean);
+
+  return { type: 'FeatureCollection', features };
+}
+
+async function loadRawRoadLayer() {
+  const bounds = map ? map.getBounds() : null;
+  const south = bounds ? bounds.getSouth() : DEFAULT_BOUNDS[0][0];
+  const west = bounds ? bounds.getWest() : DEFAULT_BOUNDS[0][1];
+  const north = bounds ? bounds.getNorth() : DEFAULT_BOUNDS[1][0];
+  const east = bounds ? bounds.getEast() : DEFAULT_BOUNDS[1][1];
+  const overpassQuery = `[out:json][timeout:25];
+way["highway"~"motorway|trunk|primary|secondary|tertiary"](${south},${west},${north},${east});
+out geom;`;
+
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: overpassQuery
+  });
+  if (!res.ok) throw new Error('Overpass API error: ' + res.status);
+  const payload = await res.json();
+  const features = (payload.elements || [])
+    .map(element => {
+      if (!Array.isArray(element.geom) || element.geom.length < 2) return null;
+      const coordinates = element.geom.map(pt => [pt.lon, pt.lat]);
+      return {
+        type: 'Feature',
+        properties: {
+          id: element.id,
+          name: element.tags?.name || '',
+          highway: element.tags?.highway || 'road'
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates
+        }
+      };
+    })
+    .filter(Boolean);
+  return { type: 'FeatureCollection', features };
+}
+
+async function loadRawZoningLayer() {
+  const bounds = map
+    ? [[map.getBounds().getSouth(), map.getBounds().getWest()], [map.getBounds().getNorth(), map.getBounds().getEast()]]
+    : DEFAULT_BOUNDS;
+
+  try {
+    const liveData = await loadZoningInBounds(bounds);
+    if (liveData && Array.isArray(liveData.features)) return liveData;
+  } catch (err) {
+    // Fallback to bundled data file.
+  }
+
+  const res = await fetch('data/zoning_simplified.geojson');
+  if (!res.ok) throw new Error('zoning_simplified.geojson unavailable');
+  return res.json();
+}
+
+function buildRawLayer(config, geojson) {
+  if (config.geometry === 'point') {
+    return L.geoJSON(geojson, {
+      pane: config.pane,
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 4,
+        color: config.color,
+        weight: 1,
+        opacity: 0.95,
+        fillColor: config.color,
+        fillOpacity: 0.84
+      }),
+      onEachFeature: (feature, layer) => {
+        const nama = feature.properties?.nama || config.label;
+        const kategori = feature.properties?.kategori || config.label;
+        layer.bindTooltip(`${escapeHtml(nama)} (${escapeHtml(kategori)})`, { sticky: true });
+      }
+    });
+  }
+
+  if (config.geometry === 'line') {
+    return L.geoJSON(geojson, {
+      pane: config.pane,
+      style: {
+        color: config.color,
+        weight: 2,
+        opacity: 0.8
+      },
+      onEachFeature: (feature, layer) => {
+        const roadClass = feature.properties?.highway || 'jalan';
+        const roadName = feature.properties?.name || '(tanpa nama)';
+        layer.bindTooltip(`${escapeHtml(roadName)} • ${escapeHtml(roadClass)}`, { sticky: true });
+      }
+    });
+  }
+
+  return L.geoJSON(geojson, {
+    pane: config.pane,
+    style: {
+      color: config.color,
+      weight: 1,
+      opacity: 0.9,
+      fillColor: config.color,
+      fillOpacity: 0.14
+    },
+    onEachFeature: (feature, layer) => {
+      const zona = feature.properties?.namzon || feature.properties?.NAMZON || 'Zonasi';
+      const subZona = feature.properties?.namszn || feature.properties?.NAMSZN || '';
+      const text = subZona ? `${zona} - ${subZona}` : zona;
+      layer.bindTooltip(escapeHtml(text), { sticky: true });
+    }
+  });
+}
+
+function setRawLayerBusy(checkboxId, isBusy) {
+  const input = document.getElementById(checkboxId);
+  if (!input) return;
+  if (isBusy) {
+    input.dataset.prevTitle = input.title || '';
+    input.title = 'Memuat data...';
+    input.disabled = true;
+    return;
+  }
+  input.title = input.dataset.prevTitle || '';
+  input.disabled = false;
+}
+
+async function syncRawLayer(key) {
+  const config = RAW_LAYER_CONFIG[key];
+  const state = rawLayerState[key];
+  if (!config || !state) return;
+
+  if (!layerVisibility[key]) {
+    if (state.layer && map.hasLayer(state.layer)) map.removeLayer(state.layer);
+    return;
+  }
+
+  if (state.layer) {
+    if (!map.hasLayer(state.layer)) state.layer.addTo(map);
+    return;
+  }
+
+  if (state.loading) return;
+  state.loading = true;
+  setRawLayerBusy(config.checkboxId, true);
+
+  try {
+    const geojson = await config.loader();
+    state.layer = buildRawLayer(config, geojson);
+    if (layerVisibility[key]) state.layer.addTo(map);
+  } catch (err) {
+    console.error(err);
+    layerVisibility[key] = false;
+    const input = document.getElementById(config.checkboxId);
+    if (input) input.checked = false;
+    alert(`Gagal memuat layer data mentah: ${config.label}`);
+  } finally {
+    state.loading = false;
+    setRawLayerBusy(config.checkboxId, false);
+  }
+}
+
+function syncRawLayers() {
+  Object.keys(RAW_LAYER_CONFIG).forEach(key => {
+    void syncRawLayer(key);
+  });
+}
+
 function initLayerControls() {
   const bindings = [
     ['layer-planning-grid', 'planningGrid'],
     ['layer-score-heatmap', 'scoreHeatmap'],
     ['layer-selected-sites', 'selectedSites'],
-    ['layer-legend', 'legend']
+    ['layer-legend', 'legend'],
+    ['layer-raw-point-apotek', 'rawPointApotek'],
+    ['layer-raw-point-minimarket', 'rawPointMinimarket'],
+    ['layer-raw-line-jalan', 'rawLineJalan'],
+    ['layer-raw-polygon-zonasi', 'rawPolygonZonasi']
   ];
 
   bindings.forEach(([id, key]) => {
@@ -374,6 +621,8 @@ function applyLayerVisibility() {
     clearInactiveGrid();
     hidePlanningGridOverlay();
   }
+
+  syncRawLayers();
 }
 
 function addPoint(layer) {

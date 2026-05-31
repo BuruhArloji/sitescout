@@ -105,10 +105,28 @@
         </div>
         <div class="layer-control" id="layer-control">
           <div class="layer-control-title">Map Layers</div>
-          <label><input type="checkbox" id="layer-planning-grid" checked /> Planning grid</label>
-          <label><input type="checkbox" id="layer-score-heatmap" checked /> Score heatmap</label>
-          <label><input type="checkbox" id="layer-selected-sites" checked /> Selected sites</label>
-          <label><input type="checkbox" id="layer-legend" checked /> Legend</label>
+          <div class="layer-control-group">
+            <div class="layer-control-subtitle">Analisis</div>
+            <label><input type="checkbox" id="layer-planning-grid" checked /> Planning grid</label>
+            <label><input type="checkbox" id="layer-score-heatmap" checked /> Score heatmap</label>
+            <label><input type="checkbox" id="layer-selected-sites" checked /> Selected sites</label>
+            <label><input type="checkbox" id="layer-legend" checked /> Legend</label>
+          </div>
+          <div class="layer-control-group">
+            <div class="layer-control-subtitle">Data Mentah - Titik</div>
+            <label><input type="checkbox" id="layer-raw-point-apotek" /> Apotek</label>
+            <label><input type="checkbox" id="layer-raw-point-minimarket" /> Minimarket</label>
+            <label class="is-disabled"><input type="checkbox" disabled /> Soon</label>
+          </div>
+          <div class="layer-control-group">
+            <div class="layer-control-subtitle">Data Mentah - Garis</div>
+            <label><input type="checkbox" id="layer-raw-line-jalan" /> Jalan</label>
+          </div>
+          <div class="layer-control-group">
+            <div class="layer-control-subtitle">Data Mentah - Poligon</div>
+            <label><input type="checkbox" id="layer-raw-polygon-zonasi" /> Zonasi</label>
+            <label class="is-disabled"><input type="checkbox" disabled /> Soon</label>
+          </div>
         </div>
         <div id="legend">
           <div class="legend-title">Skor Kesesuaian</div>
@@ -139,10 +157,10 @@
   </div>
 
   <input type="file" id="file-input" accept=".json" style="display:none" />
-  <script defer src="js/variables.js?v=20260531-05"></script>
-  <script defer src="js/grid-mask.js?v=20260531-05"></script>
-  <script defer src="js/analysis.js?v=20260531-05"></script>
-  <script defer src="js/data.js?v=20260531-05"></script>
-  <script defer src="js/app.js?v=20260531-05"></script>
+  <script defer src="js/variables.js?v=20260531-06"></script>
+  <script defer src="js/grid-mask.js?v=20260531-06"></script>
+  <script defer src="js/analysis.js?v=20260531-06"></script>
+  <script defer src="js/data.js?v=20260531-06"></script>
+  <script defer src="js/app.js?v=20260531-06"></script>
 </body>
 </html>
