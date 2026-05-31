@@ -32,8 +32,8 @@ button { border: 0; }
 .app-shell {
   height: 100vh;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
   background:
     radial-gradient(circle at top right, rgba(79,255,176,0.07), transparent 34%),
@@ -42,7 +42,6 @@ button { border: 0; }
 
 .topbar {
   height: 68px;
-  flex-shrink: 0;
   background: rgba(21,25,34,0.96);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -163,7 +162,6 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
 }
 
 .stats-bar {
-  flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   background: rgba(21,25,34,0.9);
@@ -192,19 +190,21 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
 .stat-label { color: var(--muted); font-size: 11px; }
 
 .workspace {
-  flex: 1;
-  height: calc(100vh - 122px);
   min-height: 0;
   overflow: hidden;
   display: grid;
   grid-template-columns: 420px minmax(0, 1fr);
 }
 
+.workspace > * { min-height: 0; }
+
 .control-panel {
+  height: 100%;
   min-height: 0;
   background: rgba(13,15,20,0.98);
   border-right: 1px solid var(--border);
-  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   overscroll-behavior: contain;
   scrollbar-color: rgba(79,255,176,0.42) rgba(255,255,255,0.04);
   scrollbar-width: thin;
@@ -233,11 +233,7 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
 }
 
 .action-section {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: rgba(13,15,20,0.96);
-  box-shadow: 0 14px 28px rgba(0,0,0,0.22);
 }
 
 .intro-section h2 {
@@ -441,6 +437,7 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   position: relative;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
   background: #0a0c10;
 }

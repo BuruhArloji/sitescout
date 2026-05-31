@@ -61,6 +61,10 @@ function initMap() {
   });
 
   map.fitBounds(DEFAULT_BOUNDS);
+  window.setTimeout(() => {
+    map.invalidateSize();
+    if (inactiveGridLayer) inactiveGridLayer.bringToFront();
+  }, 0);
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
@@ -266,8 +270,8 @@ function renderInactiveGrid() {
 
 async function loadJakartaGridMask() {
   if (jakartaGridMask) return jakartaGridMask;
-  if (typeof JAKARTA_GRID_CELL_IDS !== 'undefined' && Array.isArray(JAKARTA_GRID_CELL_IDS)) {
-    jakartaGridMask = new Set(JAKARTA_GRID_CELL_IDS);
+  if (Array.isArray(window.JAKARTA_GRID_CELL_IDS)) {
+    jakartaGridMask = new Set(window.JAKARTA_GRID_CELL_IDS);
     return jakartaGridMask;
   }
   try {
