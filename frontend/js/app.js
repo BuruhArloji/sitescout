@@ -59,17 +59,20 @@ function initMap() {
     selectedPoints = [];
     updateResults();
   });
+  map.on('move zoom resize', renderPlanningGridOverlay);
 
   map.fitBounds(DEFAULT_BOUNDS);
   window.setTimeout(() => {
     map.invalidateSize();
     if (inactiveGridLayer) inactiveGridLayer.bringToFront();
+    renderPlanningGridOverlay();
   }, 0);
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
   loadJakartaGridMask();
   renderInactiveGrid();
+  renderPlanningGridOverlay();
 }
 
 function populateBusinessSelect() {
@@ -214,6 +217,7 @@ document.getElementById('btn-generate').addEventListener('click', async function
 
 function renderScoreMap(cells) {
   clearInactiveGrid();
+  hidePlanningGridOverlay();
   clearScoreLayer({ keepScores: true });
   scoreLayer = L.geoJSON({
     type: 'FeatureCollection',
@@ -244,6 +248,7 @@ function clearScoreLayer(options = {}) {
     scoredCells = [];
     updateStats(0, 0);
     renderInactiveGrid();
+    renderPlanningGridOverlay();
   }
 }
 
@@ -266,6 +271,7 @@ function renderInactiveGrid() {
     }
   }).addTo(map);
   inactiveGridLayer.bringToFront();
+  renderPlanningGridOverlay();
 }
 
 async function loadJakartaGridMask() {
@@ -289,6 +295,30 @@ function clearInactiveGrid() {
   if (!inactiveGridLayer) return;
   map.removeLayer(inactiveGridLayer);
   inactiveGridLayer = null;
+}
+
+function renderPlanningGridOverlay() {
+  const overlay = document.getElementById('planning-grid-overlay');
+  if (!overlay || !map || scoredCells.length > 0) return;
+
+  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
+  const mapSize = map.getSize();
+  overlay.setAttribute('viewBox', `0 0 ${mapSize.x} ${mapSize.y}`);
+  overlay.innerHTML = cells.map(cell => {
+    const b = cell.properties.bbox;
+    const nw = map.latLngToContainerPoint([b[3], b[0]]);
+    const se = map.latLngToContainerPoint([b[1], b[2]]);
+    const x = Math.round(nw.x);
+    const y = Math.round(nw.y);
+    const width = Math.max(1, Math.round(se.x - nw.x));
+    const height = Math.max(1, Math.round(se.y - nw.y));
+    return `<rect x="${x}" y="${y}" width="${width}" height="${height}"></rect>`;
+  }).join('');
+}
+
+function hidePlanningGridOverlay() {
+  const overlay = document.getElementById('planning-grid-overlay');
+  if (overlay) overlay.innerHTML = '';
 }
 
 function addPoint(layer) {
