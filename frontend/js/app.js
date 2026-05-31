@@ -201,6 +201,10 @@ document.getElementById('btn-generate').addEventListener('click', async function
 
 function renderScoreMap(cells) {
   clearScoreLayer();
+  console.log('🎨 renderScoreMap:', cells.length, 'cells');
+  console.log('Sample cell:', cells[0]?.properties?.score, cells[0]?.geometry?.coordinates?.[0]?.[0]);
+  console.log('Map bounds:', map.getBounds().toBBoxString());
+  try {
   scoreLayer = L.geoJSON({
     type: 'FeatureCollection', features: cells
   }, {
@@ -219,6 +223,8 @@ function renderScoreMap(cells) {
       });
     }
   }).addTo(map);
+  console.log('✅ scoreLayer added:', scoreLayer?.getLayers()?.length, 'layers');
+  } catch(e) { console.error('❌ renderScoreMap error:', e); }
 }
 
 function clearScoreLayer() {
