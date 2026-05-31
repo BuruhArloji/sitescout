@@ -183,7 +183,10 @@ document.getElementById('btn-generate').addEventListener('click', async function
     });
     console.log('Scored cells:', scoredCells.length, 'avg score:', (scoredCells.reduce((s,c)=>s+c.properties.score,0)/scoredCells.length*100).toFixed(1)+'%');
 
+    const currentResults = [...scoredCells];
     renderScoreMap(scoredCells);
+    // restore scoredCells after clearScoreLayer resets it
+    scoredCells = currentResults;
     updateResults();
     document.getElementById('results-section').style.display = 'block';
   } catch (err) {
