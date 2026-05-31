@@ -1,6 +1,6 @@
 // === SiteScout main application ===
 
-let map, drawnItems, scoreLayer;
+let map, drawnItems, inactiveGridLayer, scoreLayer;
 let currentBisnis = null;
 let userVariables = {};
 let userWeights = {};
@@ -57,6 +57,7 @@ function initMap() {
   });
 
   map.fitBounds(DEFAULT_BOUNDS);
+  renderInactiveGrid();
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
@@ -203,6 +204,7 @@ document.getElementById('btn-generate').addEventListener('click', async function
 });
 
 function renderScoreMap(cells) {
+  clearInactiveGrid();
   clearScoreLayer({ keepScores: true });
   scoreLayer = L.geoJSON({
     type: 'FeatureCollection',
@@ -232,7 +234,32 @@ function clearScoreLayer(options = {}) {
   if (!options.keepScores) {
     scoredCells = [];
     updateStats(0, 0);
+    renderInactiveGrid();
   }
+}
+
+function renderInactiveGrid() {
+  if (!map || inactiveGridLayer || scoredCells.length > 0) return;
+  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE);
+  inactiveGridLayer = L.geoJSON({
+    type: 'FeatureCollection',
+    features: cells
+  }, {
+    interactive: false,
+    style: {
+      fillColor: '#7f8aa3',
+      fillOpacity: 0.045,
+      color: '#a8b1c4',
+      weight: 0.45,
+      opacity: 0.24
+    }
+  }).addTo(map);
+}
+
+function clearInactiveGrid() {
+  if (!inactiveGridLayer) return;
+  map.removeLayer(inactiveGridLayer);
+  inactiveGridLayer = null;
 }
 
 function addPoint(layer) {
