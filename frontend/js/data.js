@@ -85,3 +85,73 @@ async function loadZoningInBounds(bounds) {
   const features = await res.json()
   return { type: 'FeatureCollection', features }
 }
+
+
+// ===== REAL DATA FOR SCORING =====
+
+// Fetch all POI of a specific category in Jakarta bounds
+async function loadPOIByCategory(kategori) {
+  const data = await fetchFromSupabase('jakarta_poi', {
+    select: 'id,nama,kategori,latitude,longitude',
+    kategori: `ilike.*${encodeURIComponent(kategori)}*`,
+    limit: '5000'
+  })
+  console.log(`📊 POI "${kategori}": ${data.length} titik`)
+  return data.map(d => ({
+    type: 'Feature',
+    properties: { id: d.id, nama: d.nama, kategori: d.kategori },
+    geometry: { type: 'Point', coordinates: [d.longitude, d.latitude] }
+  }))
+}
+
+// Count POI in each grid cell using Turf.js
+function countPOIPerCell(gridCells, poiFeatures, radiusKm = 0.5) {
+  if (!poiFeatures || poiFeatures.length === 0) return gridCells
+  
+  const poiCollection = { type: 'FeatureCollection', features: poiFeatures }
+  
+  return gridCells.map(cell => {
+    const center = turf.centerOfMass(cell)
+    const ptsWithin = turf.pointsWithinPolygon(poiCollection, cell)
+    const nearby = turf.pointsWithinPolygon(poiCollection, turf.buffer(cell, radiusKm, {units: 'kilometers'}))
+    
+    cell.properties.poi_count = ptsWithin.features.length
+    cell.properties.poi_nearby = nearby.features.length
+    
+    // Find nearest POI distance
+    let minDist = Infinity
+    for (const p of poiFeatures) {
+      const d = turf.distance(center, p, {units: 'kilometers'})
+      if (d < minDist) minDist = d
+    }
+    cell.properties.nearest_poi_km = minDist === Infinity ? 5 : minDist
+    
+    return cell
+  })
+}
+
+// Build real variable values for a cell
+function getRealVariables(cell, bisnisType) {
+  // Mapping bisnis type -> competitor category
+  const competitorMap = {
+    apotek: 'Apotek',
+    minimarket: 'Minimarket',
+    restoran: 'Restoran',
+    klinik: 'Klinik',
+    kantor: 'Kantor'
+  }
+  
+  return {
+    // Competitor variables - from real data
+    komp_count: cell.properties.poi_count || 0,
+    komp_nearby: cell.properties.poi_nearby || 0,
+    komp_nearest_km: cell.properties.nearest_poi_km || 5,
+    
+    // For now, other variables still use defaults
+    // Will be replaced with real data as we upload more datasets
+    demand_penduduk: 20000,
+    akses_jalan: 50,
+    reg_kdb: 60,
+    reg_klb: 3
+  }
+}
