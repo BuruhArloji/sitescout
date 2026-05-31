@@ -162,26 +162,63 @@ document.getElementById('btn-generate').addEventListener('click', async function
 
   try {
     await new Promise(r => setTimeout(r, 300));
-    const bounds = map.getBounds();
-    const ba = [[bounds.getSouth(), bounds.getWest()], [bounds.getNorth(), bounds.getEast()]];
-    const gridCells = generateGrid(ba, 0.003);
-    allPOIData = getDummyDataPoints(ba, currentBisnis);
+    map.fitBounds(DEFAULT_BOUNDS);
+    const gridCells = generateGrid(DEFAULT_BOUNDS, 0.015);
+    console.log('Grid: ' + gridCells.length + ' cells');
 
-    scoredCells = gridCells.map(cell => {
-      const score = calculateScore(cell, userVariables, userWeights, userGroupWeights, currentBisnis);
-      let boost = 0;
-      try {
-        if (typeof turf !== 'undefined') {
-          const center = turf.centerOfMass(cell);
-          const nearby = allPOIData.filter(p => turf.distance(center, p, {units:'kilometers'}) < 0.5);
-          boost = Math.min(0.15, nearby.length * 0.02);
-          cell.properties.nearby_pois = nearby.length;
-        }
-      } catch(e) { console.warn('Turf error:', e); }
-      cell.properties.score = Math.min(1, score + boost);
+    this.textContent = '⏳ Loading POI...';
+
+    // Map business type to competitor category
+    var catMap = { apotek: 'Apotek', minimarket: 'Minimarket', restoran: 'Restoran', klinik: 'Klinik', kantor: 'Kantor' };
+    var compCat = catMap[currentBisnis] || currentBisnis;
+
+    // Fetch real POI data from Supabase
+    var poiResp = await fetchFromSupabase('jakarta_poi', {
+      select: 'id,kategori,latitude,longitude',
+      kategori: 'ilike.*' + encodeURIComponent(compCat) + '*',
+      limit: '5000'
+    });
+    console.log('POI ' + compCat + ': ' + poiResp.length + ' titik');
+
+    // Convert to turf Points [lng, lat]
+    var poiPts = [];
+    for (var pi = 0; pi < poiResp.length; pi++) {
+      poiPts.push(turf.point([poiResp[pi].longitude, poiResp[pi].latitude]));
+    }
+
+    this.textContent = '⏳ Scoring cells...';
+
+    scoredCells = gridCells.map(function(cell) {
+      var center = turf.centerOfMass(cell);
+      var poiCount = 0;
+      var minDist = 10;
+
+      for (var i = 0; i < poiPts.length; i++) {
+        if (turf.booleanPointInPolygon(poiPts[i], cell)) poiCount++;
+        var d = turf.distance(center, poiPts[i], {units:'kilometers'});
+        if (d < minDist) minDist = d;
+      }
+
+      cell.properties.poi_count = poiCount;
+      cell.properties.nearest_km = minDist;
+
+      // Merge user preferences with real data
+      var merged = {};
+      for (var k in userVariables) merged[k] = userVariables[k];
+      merged['komp_' + currentBisnis] = poiCount;
+      merged['komp_jarak'] = minDist * 1000;
+
+      var score = calculateScore(cell, merged, userWeights, userGroupWeights, currentBisnis);
+      cell.properties.score = Math.min(1, score);
       return cell;
     });
-    console.log('Scored cells:', scoredCells.length, 'avg score:', (scoredCells.reduce((s,c)=>s+c.properties.score,0)/scoredCells.length*100).toFixed(1)+'%');
+
+    var totalScore = 0;
+    for (var i = 0; i < scoredCells.length; i++) totalScore += scoredCells[i].properties.score;
+    console.log('Scored: ' + scoredCells.length + ' cells, avg: ' + (totalScore / scoredCells.length * 100).toFixed(1) + '%');
+    var maxPOI = 0;
+    for (var i = 0; i < scoredCells.length; i++) if (scoredCells[i].properties.poi_count > maxPOI) maxPOI = scoredCells[i].properties.poi_count;
+    console.log('POI range: 0-' + maxPOI);
 
     const currentResults = [...scoredCells];
     renderScoreMap(scoredCells);
