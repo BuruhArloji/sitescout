@@ -18,8 +18,12 @@ let layerVisibility = {
   legend: true,
   rawPointApotek: false,
   rawPointMinimarket: false,
+  rawPointRestoran: false,
+  rawPointKlinik: false,
+  rawPointKantor: false,
   rawLineJalan: false,
-  rawPolygonZonasi: false
+  rawPolygonZonasi: false,
+  rawPolygonLahan: false
 };
 
 const DEFAULT_BOUNDS = [[-6.37, 106.68], [-6.08, 106.98]];
@@ -107,11 +111,11 @@ const rawLayerState = Object.keys(RAW_LAYER_CONFIG).reduce((acc, key) => {
 function initMap() {
   map = L.map('map', { center: [-6.22, 106.83], zoom: 12 });
   map.createPane('rawPolygonPane');
-  map.getPane('rawPolygonPane').style.zIndex = 355;
+  map.getPane('rawPolygonPane').style.zIndex = 440;
   map.createPane('rawLinePane');
-  map.getPane('rawLinePane').style.zIndex = 365;
+  map.getPane('rawLinePane').style.zIndex = 450;
   map.createPane('rawPointPane');
-  map.getPane('rawPointPane').style.zIndex = 375;
+  map.getPane('rawPointPane').style.zIndex = 460;
   map.createPane('planningGridPane');
   map.getPane('planningGridPane').style.zIndex = 430;
 
@@ -508,7 +512,7 @@ async function loadRawLahanLayer() {
   } catch (err) {
     // ignore
   }
-  return null;
+  return { type: 'FeatureCollection', features: [] };
 }
 
 function buildRawLayer(config, geojson) {
@@ -542,7 +546,7 @@ function buildRawLayer(config, geojson) {
       onEachFeature: (feature, layer) => {
         const roadClass = feature.properties?.highway || 'jalan';
         const roadName = feature.properties?.name || '(tanpa nama)';
-        layer.bindTooltip(`${escapeHtml(roadName)} • ${escapeHtml(roadClass)}`, { sticky: true });
+        layer.bindTooltip(`${escapeHtml(roadName)} - ${escapeHtml(roadClass)}`, { sticky: true });
       }
     });
   }
@@ -632,8 +636,7 @@ function initLayerControls() {
     ['layer-raw-point-kantor', 'rawPointKantor'],
     ['layer-raw-line-jalan', 'rawLineJalan'],
     ['layer-raw-polygon-zonasi', 'rawPolygonZonasi'],
-    ['layer-raw-polygon-lahan', 'rawPolygonLahan'],
-    ['layer-raw-polygon-zonasi', 'rawPolygonZonasi']
+    ['layer-raw-polygon-lahan', 'rawPolygonLahan']
   ];
 
   bindings.forEach(([id, key]) => {
