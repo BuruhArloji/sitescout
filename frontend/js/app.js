@@ -11,6 +11,7 @@ let isAnalyzing = false;
 let customGroupCount = 0;
 let varCounters = {};
 let jakartaGridMask = null;
+let selectedMarketAreaIds = ['jakarta'];
 let layerVisibility = {
   planningGrid: true,
   scoreHeatmap: true,
@@ -26,7 +27,13 @@ let layerVisibility = {
   rawPolygonLahan: false
 };
 
-const DEFAULT_BOUNDS = [[-6.37, 106.68], [-6.08, 106.98]];
+const MARKET_AREAS = {
+  jakarta: { id: 'jakarta', label: 'Jakarta', bounds: [[-6.37, 106.68], [-6.08, 106.98]], supportsMask: true },
+  bogor: { id: 'bogor', label: 'Bogor', bounds: [[-6.67, 106.73], [-6.47, 106.88]], supportsMask: false },
+  depok: { id: 'depok', label: 'Depok', bounds: [[-6.49, 106.74], [-6.33, 106.89]], supportsMask: false },
+  tangerang: { id: 'tangerang', label: 'Tangerang', bounds: [[-6.25, 106.53], [-6.08, 106.71]], supportsMask: false },
+  bekasi: { id: 'bekasi', label: 'Bekasi', bounds: [[-6.33, 106.90], [-6.15, 107.05]], supportsMask: false }
+};
 const GRID_CELL_SIZE = 0.015;
 const COMPETITOR_CATEGORY = {
   apotek: 'Apotek',
@@ -108,6 +115,81 @@ const rawLayerState = Object.keys(RAW_LAYER_CONFIG).reduce((acc, key) => {
   return acc;
 }, {});
 
+function normalizeMarketSelection(areaIds) {
+  const cleaned = Array.from(new Set((areaIds || []).filter(id => Boolean(MARKET_AREAS[id]))));
+  return cleaned.length > 0 ? cleaned : ['jakarta'];
+}
+
+function getSelectedAreaBounds() {
+  const ids = normalizeMarketSelection(selectedMarketAreaIds);
+  let minLat = Infinity;
+  let minLng = Infinity;
+  let maxLat = -Infinity;
+  let maxLng = -Infinity;
+
+  ids.forEach(id => {
+    const [sw, ne] = MARKET_AREAS[id].bounds;
+    minLat = Math.min(minLat, sw[0]);
+    minLng = Math.min(minLng, sw[1]);
+    maxLat = Math.max(maxLat, ne[0]);
+    maxLng = Math.max(maxLng, ne[1]);
+  });
+  return [[minLat, minLng], [maxLat, maxLng]];
+}
+
+function getSelectedAreaLabel(options = {}) {
+  const compact = options.compact === true;
+  const ids = normalizeMarketSelection(selectedMarketAreaIds);
+  const labels = ids.map(id => MARKET_AREAS[id].label);
+  if (labels.length === 1) return labels[0];
+  if (!compact) return labels.join(', ');
+  if (labels.length === 2) return `${labels[0]}, ${labels[1]}`;
+  return `${labels[0]} +${labels.length - 1} kota`;
+}
+
+function expandMaskToBoundaryIntersections(rawMask, cellSize) {
+  const expanded = new Set();
+  rawMask.forEach(cellId => {
+    const parts = cellId.replace('cell_', '').split('_');
+    if (parts.length !== 2) return;
+    const baseLat = Number(parts[0]);
+    const baseLng = Number(parts[1]);
+    if (!Number.isFinite(baseLat) || !Number.isFinite(baseLng)) return;
+
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const lat = baseLat + (dy * cellSize);
+        const lng = baseLng + (dx * cellSize);
+        expanded.add(getGridCellId(lat, lng));
+      }
+    }
+  });
+  return expanded;
+}
+
+function getMaskForArea(areaId) {
+  if (areaId === 'jakarta') return jakartaGridMask;
+  return null;
+}
+
+function generateGridForSelectedAreas() {
+  const ids = normalizeMarketSelection(selectedMarketAreaIds);
+  const byId = new Set();
+  const allCells = [];
+
+  ids.forEach(id => {
+    const area = MARKET_AREAS[id];
+    if (!area) return;
+    const areaCells = generateGrid(area.bounds, GRID_CELL_SIZE, getMaskForArea(id));
+    areaCells.forEach(cell => {
+      if (byId.has(cell.properties.id)) return;
+      byId.add(cell.properties.id);
+      allCells.push(cell);
+    });
+  });
+  return allCells;
+}
+
 function initMap() {
   map = L.map('map', { center: [-6.22, 106.83], zoom: 12 });
   map.createPane('rawPolygonPane');
@@ -153,7 +235,7 @@ function initMap() {
   });
   map.on('move zoom resize', renderPlanningGridOverlay);
 
-  map.fitBounds(DEFAULT_BOUNDS);
+  map.fitBounds(getSelectedAreaBounds());
   window.setTimeout(() => {
     map.invalidateSize();
     if (inactiveGridLayer) inactiveGridLayer.bringToFront();
@@ -162,10 +244,13 @@ function initMap() {
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
+  initMarketAreaControls();
   initLayerControls();
+  initLayerPanelCollapse();
   loadJakartaGridMask();
   renderInactiveGrid();
   renderPlanningGridOverlay();
+  updateStats(0, 0);
 }
 
 function populateBusinessSelect() {
@@ -271,19 +356,18 @@ document.getElementById('btn-generate').addEventListener('click', async function
   this.disabled = true;
 
   try {
-    map.fitBounds(DEFAULT_BOUNDS);
-    const gridCells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
+    const selectedBounds = getSelectedAreaBounds();
+    map.fitBounds(selectedBounds);
+    const gridCells = generateGridForSelectedAreas();
 
     this.textContent = 'Memuat POI...';
     const compCat = COMPETITOR_CATEGORY[currentBisnis] || currentBisnis;
-    const poiResp = await fetchFromSupabase('jakarta_poi', {
-      select: 'id,kategori,latitude,longitude',
-      kategori: 'ilike.*' + compCat + '*',
-      limit: '5000'
-    });
+    const [sw, ne] = selectedBounds;
+    const poiQuery = `select=id,kategori,latitude,longitude&kategori=ilike.*${encodeURIComponent(compCat)}*&and=(latitude.gte.${sw[0]},latitude.lte.${ne[0]},longitude.gte.${sw[1]},longitude.lte.${ne[1]})&limit=5000`;
+    const poiResp = await fetchFromSupabase('jakarta_poi', poiQuery);
 
     this.textContent = 'Menghitung skor...';
-    enrichGridWithPOIMetrics(gridCells, poiResp, DEFAULT_BOUNDS, GRID_CELL_SIZE);
+    enrichGridWithPOIMetrics(gridCells, poiResp);
 
     scoredCells = gridCells.map(cell => {
       const merged = { ...userVariables };
@@ -349,7 +433,7 @@ function clearScoreLayer(options = {}) {
 function renderInactiveGrid() {
   if (!map || inactiveGridLayer || scoredCells.length > 0) return;
   if (!layerVisibility.planningGrid) return;
-  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
+  const cells = generateGridForSelectedAreas();
   inactiveGridLayer = L.geoJSON({
     type: 'FeatureCollection',
     features: cells
@@ -361,8 +445,7 @@ function renderInactiveGrid() {
       fillOpacity: 0.08,
       color: '#d7deea',
       weight: 0.9,
-      opacity: 0.58,
-      dashArray: '3 5'
+      opacity: 0.58
     }
   }).addTo(map);
   inactiveGridLayer.bringToFront();
@@ -372,14 +455,14 @@ function renderInactiveGrid() {
 async function loadJakartaGridMask() {
   if (jakartaGridMask) return jakartaGridMask;
   if (Array.isArray(window.JAKARTA_GRID_CELL_IDS)) {
-    jakartaGridMask = new Set(window.JAKARTA_GRID_CELL_IDS);
+    jakartaGridMask = expandMaskToBoundaryIntersections(new Set(window.JAKARTA_GRID_CELL_IDS), GRID_CELL_SIZE);
     return jakartaGridMask;
   }
   try {
     const res = await fetch('data/jakarta_grid_mask.json');
     if (!res.ok) throw new Error('grid mask unavailable');
     const data = await res.json();
-    jakartaGridMask = new Set(data.cell_ids || []);
+    jakartaGridMask = expandMaskToBoundaryIntersections(new Set(data.cell_ids || []), GRID_CELL_SIZE);
   } catch (err) {
     jakartaGridMask = null;
   }
@@ -400,7 +483,7 @@ function renderPlanningGridOverlay() {
     return;
   }
 
-  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
+  const cells = generateGridForSelectedAreas();
   const mapSize = map.getSize();
   overlay.setAttribute('viewBox', `0 0 ${mapSize.x} ${mapSize.y}`);
   overlay.innerHTML = cells.map(cell => {
@@ -420,12 +503,62 @@ function hidePlanningGridOverlay() {
   if (overlay) overlay.innerHTML = '';
 }
 
-async function loadRawPOILayer(categoryLabel) {
-  const rows = await fetchFromSupabase('jakarta_poi', {
-    select: 'id,nama,kategori,latitude,longitude',
-    kategori: 'ilike.*' + categoryLabel + '*',
-    limit: '5000'
+function initMarketAreaControls() {
+  const picker = document.getElementById('market-area-picker');
+  const summary = document.getElementById('market-area-summary');
+  const inputs = Array.from(document.querySelectorAll('.market-area-option'));
+  if (!picker || !summary || inputs.length === 0) return;
+
+  const syncUi = () => {
+    const selected = normalizeMarketSelection(selectedMarketAreaIds);
+    selectedMarketAreaIds = selected;
+    summary.textContent = getSelectedAreaLabel({ compact: true });
+    inputs.forEach(input => {
+      input.checked = selected.includes(input.value);
+    });
+  };
+
+  syncUi();
+
+  inputs.forEach(input => {
+    input.addEventListener('change', () => {
+      const selected = inputs.filter(i => i.checked).map(i => i.value);
+      selectedMarketAreaIds = normalizeMarketSelection(selected);
+      syncUi();
+      clearScoreLayer();
+      resetRawLayers();
+      map.fitBounds(getSelectedAreaBounds());
+      applyLayerVisibility();
+      updateStats(0, 0);
+    });
   });
+}
+
+function initLayerPanelCollapse() {
+  const container = document.getElementById('layer-control');
+  const button = document.getElementById('btn-layer-collapse');
+  if (!container || !button) return;
+
+  const syncButtonState = isCollapsed => {
+    const actionLabel = isCollapsed ? 'Expand map layers' : 'Collapse map layers';
+    button.textContent = isCollapsed ? '+' : '-';
+    button.setAttribute('aria-expanded', String(!isCollapsed));
+    button.setAttribute('aria-label', actionLabel);
+    button.title = actionLabel;
+  };
+
+  syncButtonState(container.classList.contains('collapsed'));
+
+  button.addEventListener('click', () => {
+    const isCollapsed = container.classList.toggle('collapsed');
+    syncButtonState(isCollapsed);
+  });
+}
+
+async function loadRawPOILayer(categoryLabel) {
+  const [sw, ne] = getSelectedAreaBounds();
+  const query = `select=id,nama,kategori,latitude,longitude&kategori=ilike.*${encodeURIComponent(categoryLabel)}*&and=(latitude.gte.${sw[0]},latitude.lte.${ne[0]},longitude.gte.${sw[1]},longitude.lte.${ne[1]})&limit=5000`;
+  const rows = await fetchFromSupabase('jakarta_poi', query);
 
   const features = rows
     .map(row => {
@@ -452,10 +585,11 @@ async function loadRawPOILayer(categoryLabel) {
 
 async function loadRawRoadLayer() {
   const bounds = map ? map.getBounds() : null;
-  const south = bounds ? bounds.getSouth() : DEFAULT_BOUNDS[0][0];
-  const west = bounds ? bounds.getWest() : DEFAULT_BOUNDS[0][1];
-  const north = bounds ? bounds.getNorth() : DEFAULT_BOUNDS[1][0];
-  const east = bounds ? bounds.getEast() : DEFAULT_BOUNDS[1][1];
+  const fallback = getSelectedAreaBounds();
+  const south = bounds ? bounds.getSouth() : fallback[0][0];
+  const west = bounds ? bounds.getWest() : fallback[0][1];
+  const north = bounds ? bounds.getNorth() : fallback[1][0];
+  const east = bounds ? bounds.getEast() : fallback[1][1];
   const overpassQuery = `[out:json][timeout:25];
 way["highway"~"motorway|trunk|primary|secondary|tertiary"](${south},${west},${north},${east});
 out geom;`;
@@ -491,7 +625,7 @@ out geom;`;
 async function loadRawZoningLayer() {
   const bounds = map
     ? [[map.getBounds().getSouth(), map.getBounds().getWest()], [map.getBounds().getNorth(), map.getBounds().getEast()]]
-    : DEFAULT_BOUNDS;
+    : getSelectedAreaBounds();
 
   try {
     const liveData = await loadZoningInBounds(bounds);
@@ -617,6 +751,18 @@ async function syncRawLayer(key) {
   }
 }
 
+function resetRawLayers() {
+  Object.keys(rawLayerState).forEach(key => {
+    const state = rawLayerState[key];
+    const config = RAW_LAYER_CONFIG[key];
+    if (!state || !config) return;
+    if (state.layer && map && map.hasLayer(state.layer)) map.removeLayer(state.layer);
+    state.layer = null;
+    state.loading = false;
+    setRawLayerBusy(config.checkboxId, false);
+  });
+}
+
 function syncRawLayers() {
   Object.keys(RAW_LAYER_CONFIG).forEach(key => {
     void syncRawLayer(key);
@@ -740,7 +886,7 @@ function updateStats(avg, high) {
   if (avgEl) avgEl.textContent = scoredCells.length ? `${avg}%` : '-';
   if (highEl) highEl.textContent = scoredCells.length ? high.toLocaleString() : '-';
   if (pointsEl) pointsEl.textContent = selectedPoints.length.toLocaleString();
-  if (marketEl) marketEl.textContent = currentBisnis ? getBusinessConfig(currentBisnis)?.label || 'Jakarta' : 'Jakarta';
+  if (marketEl) marketEl.textContent = getSelectedAreaLabel({ compact: true });
 }
 
 document.getElementById('btn-export-csv').addEventListener('click', () => exportPoints('csv'));

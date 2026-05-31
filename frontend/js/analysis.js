@@ -94,45 +94,26 @@ function getGridCellId(lat, lng) {
   return `cell_${lat.toFixed(4)}_${lng.toFixed(4)}`;
 }
 
-function enrichGridWithPOIMetrics(gridCells, poiRows, bounds, cellSize) {
-  const latMin = bounds[0][0];
-  const lngMin = bounds[0][1];
-  const latMax = bounds[1][0];
-  const lngMax = bounds[1][1];
-  const columns = Math.ceil((lngMax - lngMin) / cellSize);
-  const poiCoords = [];
+function enrichGridWithPOIMetrics(gridCells, poiRows) {
+  const poiCoords = (poiRows || [])
+    .map(row => ({
+      lat: Number(row.latitude),
+      lng: Number(row.longitude)
+    }))
+    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
   for (const cell of gridCells) {
-    cell.properties.poi_count = 0;
-    cell.properties.nearest_km = 10;
-  }
-
-  for (const row of poiRows) {
-    const lat = Number(row.latitude);
-    const lng = Number(row.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    if (lat < latMin || lat > latMax || lng < lngMin || lng > lngMax) continue;
-
-    poiCoords.push({ lat, lng });
-    const rowIndex = Math.min(Math.floor((lat - latMin) / cellSize), Math.ceil((latMax - latMin) / cellSize) - 1);
-    const colIndex = Math.min(Math.floor((lng - lngMin) / cellSize), columns - 1);
-    const cell = gridCells[rowIndex * columns + colIndex];
-    if (cell) cell.properties.poi_count += 1;
-  }
-
-  if (poiCoords.length === 0) return gridCells;
-
-  for (const cell of gridCells) {
-    const centerLat = cell.properties.center_lat;
-    const centerLng = cell.properties.center_lng;
+    let poiCount = 0;
     let minDist = 10;
 
     for (const poi of poiCoords) {
-      const d = distanceKm(centerLat, centerLng, poi.lat, poi.lng);
+      if (pointInCell(poi.lat, poi.lng, cell)) poiCount += 1;
+      const d = distanceKm(cell.properties.center_lat, cell.properties.center_lng, poi.lat, poi.lng);
       if (d < minDist) minDist = d;
     }
 
-    cell.properties.nearest_km = minDist;
+    cell.properties.poi_count = poiCount;
+    cell.properties.nearest_km = poiCoords.length ? minDist : 10;
   }
 
   return gridCells;

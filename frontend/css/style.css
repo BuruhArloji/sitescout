@@ -100,6 +100,73 @@ button { border: 0; }
   min-width: 330px;
 }
 
+.market-area-control {
+  min-width: 260px;
+  max-width: 310px;
+}
+
+.market-picker {
+  width: 100%;
+  position: relative;
+}
+
+.market-picker summary {
+  list-style: none;
+  min-height: 36px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.market-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.market-picker summary::after {
+  content: '▾';
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.market-picker[open] summary {
+  border-color: var(--accent);
+}
+
+.market-picker-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 1400;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.market-picker-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
 label, .step-label, .eyebrow {
   color: var(--muted);
   font-size: 11px;
@@ -159,6 +226,13 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   color: #07110d;
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.toolbar-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stats-bar {
@@ -456,7 +530,6 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   fill: rgba(35,43,56,0.16);
   stroke: rgba(43,52,68,0.9);
   stroke-width: 1.2;
-  stroke-dasharray: 4 5;
   vector-effect: non-scaling-stroke;
 }
 
@@ -488,6 +561,41 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
 }
 
 .leaflet-draw { z-index: 1000; }
+.leaflet-draw.leaflet-control {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.leaflet-draw-toolbar {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.leaflet-draw-toolbar a {
+  background-color: #ffffff !important;
+  border-color: #c8d1e1 !important;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background-color: #f1f5fb !important;
+}
+
+.leaflet-draw-toolbar a:focus {
+  outline: 2px solid #90b8ff;
+  outline-offset: 1px;
+}
+
+.leaflet-draw-actions {
+  border-left: 1px solid #c8d1e1 !important;
+}
+
+.leaflet-draw-actions a {
+  background: #ffffff !important;
+  color: #24324d !important;
+  border-bottom: 1px solid #dbe2ef !important;
+}
+
 .leaflet-planning-grid-pane path {
   vector-effect: non-scaling-stroke;
 }
@@ -545,13 +653,40 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   font-size: 12px;
 }
 
+.layer-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.layer-collapse-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .layer-control-title {
   color: var(--text);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: 0;
+}
+
+.layer-control-body {
+  display: grid;
+  gap: 8px;
+}
+
+.layer-control.collapsed .layer-control-body {
+  display: none;
 }
 
 .layer-control-group {
@@ -759,6 +894,7 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   .topbar { height: auto; flex-wrap: wrap; }
   .top-control { order: 3; width: 100%; min-width: 0; }
   .top-control select { flex: 1; min-width: 0; }
+  .market-area-control { max-width: none; }
   .topbar-actions { margin-left: 0; }
   .stats-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; }
   .stat:first-child { border-left: 0; }
@@ -777,6 +913,5 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   .range-row { flex-wrap: wrap; }
   .variable-meta .desc { text-align: left; flex-basis: 100%; }
   #legend { right: 10px; bottom: 10px; max-width: calc(100vw - 20px); }
-  .map-overlay.top-left { left: 10px; top: 10px; }
   .layer-control { top: 10px; right: 10px; }
 }

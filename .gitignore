@@ -17,6 +17,10 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Local Codex artifacts
+.codex/
+tmp-uiux-skill/
+
 # Large data (keep on local D: drive)
 *.geojson
 *.pq

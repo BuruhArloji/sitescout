@@ -4,8 +4,9 @@ Web GIS interaktif untuk analisis lokasi potensial ekspansi bisnis multisektor.
 
 ## 🚀 Cara Menjalankan
 
-1. Buka `frontend/index.html` di browser
-2. Atau deploy ke Vercel/Netlify dengan drag-and-drop folder `frontend/`
+1. Buka `frontend/index.html` untuk beranda Reach Platform
+2. Klik **Open SiteScout** untuk masuk ke workspace peta (`frontend/app.html`)
+3. Atau deploy ke Vercel/Netlify dengan drag-and-drop folder `frontend/`
 
 ## 📁 Struktur Project
 

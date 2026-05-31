@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SiteScout membantu pengusaha menilai wilayah potensial untuk ekspansi cabang berbasis peta, kompetitor, akses, dan bobot bisnis." />
+  <title>SiteScout Workspace - Reach Platform</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+  <link rel="preconnect" href="https://vtwolnilfejqlbjftspk.supabase.co" crossorigin />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260531-09" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark">SS</div>
+        <div>
+          <h1>SiteScout</h1>
+          <p>Expansion Intelligence</p>
+        </div>
+      </div>
+
+      <div class="topbar-divider"></div>
+
+      <div class="top-control">
+        <label for="bisnis-select">Jenis Usaha</label>
+        <select id="bisnis-select"><option value="">Pilih jenis usaha</option></select>
+      </div>
+
+      <div class="top-control market-area-control">
+        <label for="market-area-picker">Market Area</label>
+        <details id="market-area-picker" class="market-picker">
+          <summary><span id="market-area-summary">Jakarta</span></summary>
+          <div class="market-picker-options">
+            <label><input type="checkbox" class="market-area-option" value="jakarta" checked /> Jakarta</label>
+            <label><input type="checkbox" class="market-area-option" value="bogor" /> Bogor</label>
+            <label><input type="checkbox" class="market-area-option" value="depok" /> Depok</label>
+            <label><input type="checkbox" class="market-area-option" value="tangerang" /> Tangerang</label>
+            <label><input type="checkbox" class="market-area-option" value="bekasi" /> Bekasi</label>
+          </div>
+        </details>
+      </div>
+
+      <div class="topbar-actions">
+        <a href="index.html" class="toolbar-btn toolbar-link" title="Kembali ke Beranda" aria-label="Kembali ke Beranda">Home</a>
+        <button id="btn-save-config" class="toolbar-btn" title="Simpan Konfigurasi" aria-label="Simpan Konfigurasi">Save</button>
+        <button id="btn-load-config" class="toolbar-btn" title="Muat Konfigurasi" aria-label="Muat Konfigurasi">Load</button>
+        <button id="btn-custom-bisnis" class="toolbar-btn accent" title="Buat Jenis Usaha Baru" aria-label="Buat Jenis Usaha Baru">New Model</button>
+      </div>
+    </header>
+
+    <section class="stats-bar" aria-label="Ringkasan analisis">
+      <div class="stat">
+        <span id="stat-avg" class="stat-val">-</span>
+        <span class="stat-label">Avg Suitability</span>
+      </div>
+      <div class="stat">
+        <span id="stat-high" class="stat-val">-</span>
+        <span class="stat-label">High-score Cells</span>
+      </div>
+      <div class="stat">
+        <span id="stat-points" class="stat-val">0</span>
+        <span class="stat-label">Selected Sites</span>
+      </div>
+      <div class="stat">
+        <span id="stat-market" class="stat-val">Jakarta</span>
+        <span class="stat-label">Market Area</span>
+      </div>
+    </section>
+
+    <main class="workspace">
+      <aside id="sidebar" class="control-panel">
+        <section class="panel-section intro-section">
+          <div class="eyebrow">Decision Model</div>
+          <h2>Prioritaskan lokasi yang paling masuk akal untuk ekspansi.</h2>
+          <p>Sesuaikan bobot demand, kompetitor, akses, dan regulasi. Generate heatmap, pilih kandidat, lalu export untuk survei lapangan.</p>
+        </section>
+
+        <section id="variable-section" class="panel-section" style="display:none;">
+          <div class="section-header">
+            <div>
+              <div class="eyebrow">Model Weights</div>
+              <h3>Variabel & Bobot</h3>
+            </div>
+          </div>
+          <div id="variabel-container"></div>
+        </section>
+
+        <section id="generate-section" class="panel-section action-section" style="display:none;">
+          <button id="btn-generate" class="btn-primary">Generate Wilayah Potensial</button>
+        </section>
+
+        <section id="results-section" class="panel-section results-panel" style="display:none;">
+          <div class="section-header">
+            <div>
+              <div class="eyebrow">Site Pipeline</div>
+              <h3>Hasil Analisis</h3>
+            </div>
+          </div>
+          <div id="results-summary"></div>
+          <div class="export-actions">
+            <button id="btn-export-csv" class="btn-secondary">Export CSV</button>
+            <button id="btn-export-geojson" class="btn-secondary">Export GeoJSON</button>
+            <button id="btn-reset" class="btn-reset">Reset Titik</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="map-stage">
+        <div id="map"></div>
+        <svg id="planning-grid-overlay" aria-hidden="true"></svg>
+        <div class="layer-control" id="layer-control">
+          <div class="layer-control-header">
+            <div class="layer-control-title">Map Layers</div>
+            <button id="btn-layer-collapse" class="layer-collapse-btn" type="button" aria-expanded="true" aria-controls="layer-control-body" aria-label="Collapse map layers" title="Collapse map layers">-</button>
+          </div>
+          <div id="layer-control-body" class="layer-control-body">
+            <div class="layer-control-group">
+              <div class="layer-control-subtitle">Analisis</div>
+              <label><input type="checkbox" id="layer-planning-grid" checked /> Planning grid</label>
+              <label><input type="checkbox" id="layer-score-heatmap" checked /> Score heatmap</label>
+              <label><input type="checkbox" id="layer-selected-sites" checked /> Selected sites</label>
+              <label><input type="checkbox" id="layer-legend" checked /> Legend</label>
+            </div>
+            <div class="layer-control-group">
+              <div class="layer-control-subtitle">Data Mentah - Titik</div>
+              <label><input type="checkbox" id="layer-raw-point-apotek" /> Apotek</label>
+              <label><input type="checkbox" id="layer-raw-point-minimarket" /> Minimarket</label>
+              <label><input type="checkbox" id="layer-raw-point-restoran" /> Restoran</label>
+              <label><input type="checkbox" id="layer-raw-point-klinik" /> Klinik</label>
+              <label><input type="checkbox" id="layer-raw-point-kantor" /> Kantor</label>
+            </div>
+            <div class="layer-control-group">
+              <div class="layer-control-subtitle">Data Mentah - Garis</div>
+              <label><input type="checkbox" id="layer-raw-line-jalan" /> Jalan</label>
+            </div>
+            <div class="layer-control-group">
+              <div class="layer-control-subtitle">Data Mentah - Poligon</div>
+              <label><input type="checkbox" id="layer-raw-polygon-zonasi" /> Zonasi (RDTR)</label>
+              <label><input type="checkbox" id="layer-raw-polygon-lahan" /> Penggunaan Lahan</label>
+            </div>
+          </div>
+        </div>
+        <div id="legend">
+          <div class="legend-title">Skor Kesesuaian</div>
+          <div class="legend-item"><span class="legend-color" style="background:#4fffb0"></span>Sangat Sesuai</div>
+          <div class="legend-item"><span class="legend-color" style="background:#88d66c"></span>Sesuai</div>
+          <div class="legend-item"><span class="legend-color" style="background:#ffd166"></span>Cukup</div>
+          <div class="legend-item"><span class="legend-color" style="background:#ff8a5b"></span>Kurang</div>
+          <div class="legend-item"><span class="legend-color" style="background:#ff5f6d"></span>Tidak Sesuai</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="custom-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="modal-close" id="modal-close">&times;</span>
+      <div class="eyebrow">Custom Model</div>
+      <h2>Buat Jenis Usaha Baru</h2>
+      <div class="form-group"><label>Nama Bisnis</label><input type="text" id="custom-name" placeholder="Contoh: Laundry" /></div>
+      <div class="form-group"><label>Kode Singkat</label><input type="text" id="custom-icon" placeholder="LD" maxlength="2" /></div>
+      <div id="custom-variables">
+        <div class="step-label">Kelompok Variabel</div>
+        <div id="custom-groups"></div>
+        <button id="btn-add-group" class="btn-small">+ Tambah Kelompok</button>
+      </div>
+      <button id="btn-save-custom" class="btn-primary" style="margin-top:12px">Simpan Model</button>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" accept=".json" style="display:none" />
+  <script defer src="js/variables.js?v=20260531-09"></script>
+  <script defer src="js/grid-mask.js?v=20260531-09"></script>
+  <script defer src="js/analysis.js?v=20260531-09"></script>
+  <script defer src="js/data.js?v=20260531-09"></script>
+  <script defer src="js/app.js?v=20260531-09"></script>
+</body>
+</html>
