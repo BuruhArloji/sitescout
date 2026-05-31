@@ -1,13 +1,87 @@
-// === DATA LOADER ===
-// Fase 2: akan diganti dengan fetch dari Supabase/PostGIS backend
+// === SITESCOUT — Data Loader (Supabase) ===
+// Phase 4: fetch data real dari Supabase PostGIS
+
+const SUPABASE_URL = 'https://vtwolnilfejqlbjftspk.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_nqP5SriCUsp-VssEmcsHZg_p0SEpIY_'
+
+async function fetchFromSupabase(endpoint, params = {}) {
+  const query = new URLSearchParams(params)
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}?${query}`
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+    }
+  })
+  if (!res.ok) throw new Error(`Supabase: ${res.status} ${res.statusText}`)
+  return res.json()
+}
 
 async function loadSpatialData() {
-  // Placeholder — nanti akan load GeoJSON dari backend API
-  console.log('🔄 Data loader ready — akan connect ke backend di Phase 2');
-  return null;
+  console.log('📡 Data loader ready — connected to Supabase')
+  return true
+}
+
+async function loadPOIData(bounds, kategoriFilter = null) {
+  const b = bounds
+  let query = `select=id,nama,kategori,latitude,longitude,rating,geom&order=kategori.asc`
+  if (b) {
+    query += `&and=(and(latitude.gte.${b[0][0]},latitude.lte.${b[1][0]},longitude.gte.${b[0][1]},longitude.lte.${b[1][1]}))`
+  }
+  if (kategoriFilter) {
+    query += `&kategori=ilike.*${encodeURIComponent(kategoriFilter)}*`
+  }
+  return fetchFromSupabase('jakarta_poi', query)
+}
+
+async function loadPOICategories() {
+  const data = await fetchFromSupabase('jakarta_poi', {
+    select: 'kategori',
+    limit: '20404',
+    order: 'kategori.asc'
+  })
+  const cats = {}
+  for (const item of data) {
+    const k = item.kategori || 'Lainnya'
+    cats[k] = (cats[k] || 0) + 1
+  }
+  // Sort by count descending
+  return Object.entries(cats)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => ({ kategori: k, count: v }))
 }
 
 async function loadVariableData(bisnisType, bounds) {
-  // Placeholder — nanti query PostGIS
-  return null;
+  // Mapping bisnis type ke keyword kategori POI
+  const keywordMap = {
+    apotek: 'Apotek',
+    minimarket: 'Minimarket',
+    restoran: 'Restoran',
+    klinik: 'Klinik',
+    kantor: 'Kantor'
+  }
+  const keyword = keywordMap[bisnisType]
+  if (!keyword) return []
+  return loadPOIData(bounds, keyword)
+}
+
+// ===== ZONING =====
+async function loadZoningInBounds(bounds) {
+  const [sw, ne] = bounds
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_zoning_in_bbox`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      min_lng: sw[1], min_lat: sw[0],
+      max_lng: ne[1], max_lat: ne[0],
+      row_limit: 5000
+    })
+  })
+  if (!res.ok) return null
+  const features = await res.json()
+  return { type: 'FeatureCollection', features }
 }
