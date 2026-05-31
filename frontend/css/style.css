@@ -453,8 +453,8 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
 }
 
 #planning-grid-overlay rect {
-  fill: rgba(168,177,196,0.12);
-  stroke: rgba(237,241,247,0.82);
+  fill: rgba(35,43,56,0.16);
+  stroke: rgba(43,52,68,0.9);
   stroke-width: 1.2;
   stroke-dasharray: 4 5;
   vector-effect: non-scaling-stroke;
@@ -522,6 +522,52 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   color: var(--text);
   font-size: 14px;
   font-weight: 800;
+}
+
+.layer-control {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 920;
+  min-width: 170px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(13,15,20,0.84);
+  color: var(--muted-2);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.layer-control-title {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.layer-control label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.layer-control input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 #legend {
@@ -700,4 +746,5 @@ select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px v
   .variable-meta .desc { text-align: left; flex-basis: 100%; }
   #legend { right: 10px; bottom: 10px; max-width: calc(100vw - 20px); }
   .map-overlay.top-left { left: 10px; top: 10px; }
+  .layer-control { top: 10px; right: 10px; }
 }

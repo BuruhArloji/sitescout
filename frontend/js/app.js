@@ -11,6 +11,12 @@ let isAnalyzing = false;
 let customGroupCount = 0;
 let varCounters = {};
 let jakartaGridMask = null;
+let layerVisibility = {
+  planningGrid: true,
+  scoreHeatmap: true,
+  selectedSites: true,
+  legend: true
+};
 
 const DEFAULT_BOUNDS = [[-6.37, 106.68], [-6.08, 106.98]];
 const GRID_CELL_SIZE = 0.015;
@@ -70,6 +76,7 @@ function initMap() {
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
+  initLayerControls();
   loadJakartaGridMask();
   renderInactiveGrid();
   renderPlanningGridOverlay();
@@ -237,6 +244,7 @@ function renderScoreMap(cells) {
       });
     }
   }).addTo(map);
+  applyLayerVisibility();
 }
 
 function clearScoreLayer(options = {}) {
@@ -254,6 +262,7 @@ function clearScoreLayer(options = {}) {
 
 function renderInactiveGrid() {
   if (!map || inactiveGridLayer || scoredCells.length > 0) return;
+  if (!layerVisibility.planningGrid) return;
   const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
   inactiveGridLayer = L.geoJSON({
     type: 'FeatureCollection',
@@ -300,6 +309,10 @@ function clearInactiveGrid() {
 function renderPlanningGridOverlay() {
   const overlay = document.getElementById('planning-grid-overlay');
   if (!overlay || !map || scoredCells.length > 0) return;
+  if (!layerVisibility.planningGrid) {
+    overlay.innerHTML = '';
+    return;
+  }
 
   const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
   const mapSize = map.getSize();
@@ -319,6 +332,48 @@ function renderPlanningGridOverlay() {
 function hidePlanningGridOverlay() {
   const overlay = document.getElementById('planning-grid-overlay');
   if (overlay) overlay.innerHTML = '';
+}
+
+function initLayerControls() {
+  const bindings = [
+    ['layer-planning-grid', 'planningGrid'],
+    ['layer-score-heatmap', 'scoreHeatmap'],
+    ['layer-selected-sites', 'selectedSites'],
+    ['layer-legend', 'legend']
+  ];
+
+  bindings.forEach(([id, key]) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.checked = layerVisibility[key];
+    input.addEventListener('change', () => {
+      layerVisibility[key] = input.checked;
+      applyLayerVisibility();
+    });
+  });
+}
+
+function applyLayerVisibility() {
+  const legend = document.getElementById('legend');
+  if (legend) legend.style.display = layerVisibility.legend ? 'block' : 'none';
+
+  if (scoreLayer) {
+    if (layerVisibility.scoreHeatmap && !map.hasLayer(scoreLayer)) scoreLayer.addTo(map);
+    if (!layerVisibility.scoreHeatmap && map.hasLayer(scoreLayer)) map.removeLayer(scoreLayer);
+  }
+
+  if (drawnItems) {
+    if (layerVisibility.selectedSites && !map.hasLayer(drawnItems)) drawnItems.addTo(map);
+    if (!layerVisibility.selectedSites && map.hasLayer(drawnItems)) map.removeLayer(drawnItems);
+  }
+
+  if (layerVisibility.planningGrid) {
+    if (!inactiveGridLayer && scoredCells.length === 0) renderInactiveGrid();
+    renderPlanningGridOverlay();
+  } else {
+    clearInactiveGrid();
+    hidePlanningGridOverlay();
+  }
 }
 
 function addPoint(layer) {
