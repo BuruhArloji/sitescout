@@ -64,11 +64,11 @@ function generateGrid(bounds, cellSize = 0.003) {
   for (let lat = bounds[0][0]; lat < bounds[1][0]; lat += cellSize) {
     for (let lng = bounds[0][1]; lng < bounds[1][1]; lng += cellSize) {
       const corners = [
-        [lat, lng],
-        [lat + cellSize, lng],
-        [lat + cellSize, lng + cellSize],
-        [lat, lng + cellSize],
-        [lat, lng]
+        [lng, lat],
+        [lng, lat + cellSize],
+        [lng + cellSize, lat + cellSize],
+        [lng + cellSize, lat],
+        [lng, lat]
       ];
       grid.push({
         type: 'Feature',
