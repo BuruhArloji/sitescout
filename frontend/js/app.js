@@ -64,6 +64,38 @@ const RAW_LAYER_CONFIG = {
     geometry: 'polygon',
     color: '#ff7f50',
     loader: loadRawZoningLayer
+  },
+  rawPointRestoran: {
+    checkboxId: 'layer-raw-point-restoran',
+    label: 'Restoran',
+    pane: 'rawPointPane',
+    geometry: 'point',
+    color: '#ff6b6b',
+    loader: () => loadRawPOILayer('Restoran')
+  },
+  rawPointKlinik: {
+    checkboxId: 'layer-raw-point-klinik',
+    label: 'Klinik',
+    pane: 'rawPointPane',
+    geometry: 'point',
+    color: '#c084fc',
+    loader: () => loadRawPOILayer('Klinik')
+  },
+  rawPointKantor: {
+    checkboxId: 'layer-raw-point-kantor',
+    label: 'Kantor',
+    pane: 'rawPointPane',
+    geometry: 'point',
+    color: '#f97316',
+    loader: () => loadRawPOILayer('Kantor')
+  },
+  rawPolygonLahan: {
+    checkboxId: 'layer-raw-polygon-lahan',
+    label: 'Penggunaan Lahan',
+    pane: 'rawPolygonPane',
+    geometry: 'polygon',
+    color: '#34d399',
+    loader: loadRawLahanLayer
   }
 };
 
@@ -469,6 +501,16 @@ async function loadRawZoningLayer() {
   return res.json();
 }
 
+async function loadRawLahanLayer() {
+  try {
+    const res = await fetch('data/penggunaan_lahan_simplified.geojson');
+    if (res.ok) return res.json();
+  } catch (err) {
+    // ignore
+  }
+  return null;
+}
+
 function buildRawLayer(config, geojson) {
   if (config.geometry === 'point') {
     return L.geoJSON(geojson, {
@@ -585,7 +627,12 @@ function initLayerControls() {
     ['layer-legend', 'legend'],
     ['layer-raw-point-apotek', 'rawPointApotek'],
     ['layer-raw-point-minimarket', 'rawPointMinimarket'],
+    ['layer-raw-point-restoran', 'rawPointRestoran'],
+    ['layer-raw-point-klinik', 'rawPointKlinik'],
+    ['layer-raw-point-kantor', 'rawPointKantor'],
     ['layer-raw-line-jalan', 'rawLineJalan'],
+    ['layer-raw-polygon-zonasi', 'rawPolygonZonasi'],
+    ['layer-raw-polygon-lahan', 'rawPolygonLahan'],
     ['layer-raw-polygon-zonasi', 'rawPolygonZonasi']
   ];
 
