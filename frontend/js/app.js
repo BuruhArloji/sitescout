@@ -10,6 +10,7 @@ let selectedPoints = [];
 let isAnalyzing = false;
 let customGroupCount = 0;
 let varCounters = {};
+let jakartaGridMask = null;
 
 const DEFAULT_BOUNDS = [[-6.37, 106.68], [-6.08, 106.98]];
 const GRID_CELL_SIZE = 0.015;
@@ -60,10 +61,11 @@ function initMap() {
   });
 
   map.fitBounds(DEFAULT_BOUNDS);
-  renderInactiveGrid();
   loadCustomBusiness();
   populateBusinessSelect();
   initCustomModal();
+  loadJakartaGridMask();
+  renderInactiveGrid();
 }
 
 function populateBusinessSelect() {
@@ -170,7 +172,7 @@ document.getElementById('btn-generate').addEventListener('click', async function
 
   try {
     map.fitBounds(DEFAULT_BOUNDS);
-    const gridCells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE);
+    const gridCells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
 
     this.textContent = 'Memuat POI...';
     const compCat = COMPETITOR_CATEGORY[currentBisnis] || currentBisnis;
@@ -243,7 +245,7 @@ function clearScoreLayer(options = {}) {
 
 function renderInactiveGrid() {
   if (!map || inactiveGridLayer || scoredCells.length > 0) return;
-  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE);
+  const cells = generateGrid(DEFAULT_BOUNDS, GRID_CELL_SIZE, jakartaGridMask);
   inactiveGridLayer = L.geoJSON({
     type: 'FeatureCollection',
     features: cells
@@ -260,6 +262,23 @@ function renderInactiveGrid() {
     }
   }).addTo(map);
   inactiveGridLayer.bringToFront();
+}
+
+async function loadJakartaGridMask() {
+  if (jakartaGridMask) return jakartaGridMask;
+  if (typeof JAKARTA_GRID_CELL_IDS !== 'undefined' && Array.isArray(JAKARTA_GRID_CELL_IDS)) {
+    jakartaGridMask = new Set(JAKARTA_GRID_CELL_IDS);
+    return jakartaGridMask;
+  }
+  try {
+    const res = await fetch('data/jakarta_grid_mask.json');
+    if (!res.ok) throw new Error('grid mask unavailable');
+    const data = await res.json();
+    jakartaGridMask = new Set(data.cell_ids || []);
+  } catch (err) {
+    jakartaGridMask = null;
+  }
+  return jakartaGridMask;
 }
 
 function clearInactiveGrid() {

@@ -66,6 +66,10 @@
           <p>Sesuaikan bobot demand, kompetitor, akses, dan regulasi. Generate heatmap, pilih kandidat, lalu export untuk survei lapangan.</p>
         </section>
 
+        <section id="generate-section" class="panel-section action-section" style="display:none;">
+          <button id="btn-generate" class="btn-primary">Generate Wilayah Potensial</button>
+        </section>
+
         <section id="variable-section" class="panel-section" style="display:none;">
           <div class="section-header">
             <div>
@@ -74,10 +78,6 @@
             </div>
           </div>
           <div id="variabel-container"></div>
-        </section>
-
-        <section id="generate-section" class="panel-section action-section" style="display:none;">
-          <button id="btn-generate" class="btn-primary">Generate Wilayah Potensial</button>
         </section>
 
         <section id="results-section" class="panel-section results-panel" style="display:none;">
@@ -132,6 +132,7 @@
 
   <input type="file" id="file-input" accept=".json" style="display:none" />
   <script defer src="js/variables.js"></script>
+  <script defer src="js/grid-mask.js"></script>
   <script defer src="js/analysis.js"></script>
   <script defer src="js/data.js"></script>
   <script defer src="js/app.js"></script>

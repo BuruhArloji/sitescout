@@ -59,12 +59,14 @@ function calculateScore(cell, userVars, userWeights, userGroupWeights, bisnisTyp
 }
 
 // === GRID GENERATION ===
-function generateGrid(bounds, cellSize = 0.003) {
+function generateGrid(bounds, cellSize = 0.003, allowedCellIds = null) {
   const grid = [];
   for (let lat = bounds[0][0]; lat < bounds[1][0]; lat += cellSize) {
     for (let lng = bounds[0][1]; lng < bounds[1][1]; lng += cellSize) {
       const north = Math.min(lat + cellSize, bounds[1][0]);
       const east = Math.min(lng + cellSize, bounds[1][1]);
+      const id = getGridCellId(lat, lng);
+      if (allowedCellIds && !allowedCellIds.has(id)) continue;
       const corners = [
         [lng, lat],
         [lng, north],
@@ -75,7 +77,7 @@ function generateGrid(bounds, cellSize = 0.003) {
       grid.push({
         type: 'Feature',
         properties: {
-          id: `cell_${lat.toFixed(4)}_${lng.toFixed(4)}`,
+          id,
           bbox: [lng, lat, east, north],
           center_lat: lat + (north - lat) / 2,
           center_lng: lng + (east - lng) / 2,
@@ -86,6 +88,10 @@ function generateGrid(bounds, cellSize = 0.003) {
     }
   }
   return grid;
+}
+
+function getGridCellId(lat, lng) {
+  return `cell_${lat.toFixed(4)}_${lng.toFixed(4)}`;
 }
 
 function enrichGridWithPOIMetrics(gridCells, poiRows, bounds, cellSize) {
