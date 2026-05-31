@@ -23,6 +23,9 @@ const COMPETITOR_CATEGORY = {
 
 function initMap() {
   map = L.map('map', { center: [-6.22, 106.83], zoom: 12 });
+  map.createPane('planningGridPane');
+  map.getPane('planningGridPane').style.zIndex = 430;
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap',
     maxZoom: 19
@@ -245,15 +248,18 @@ function renderInactiveGrid() {
     type: 'FeatureCollection',
     features: cells
   }, {
+    pane: 'planningGridPane',
     interactive: false,
     style: {
-      fillColor: '#7f8aa3',
-      fillOpacity: 0.045,
-      color: '#a8b1c4',
-      weight: 0.45,
-      opacity: 0.24
+      fillColor: '#a8b1c4',
+      fillOpacity: 0.08,
+      color: '#d7deea',
+      weight: 0.9,
+      opacity: 0.58,
+      dashArray: '3 5'
     }
   }).addTo(map);
+  inactiveGridLayer.bringToFront();
 }
 
 function clearInactiveGrid() {
