@@ -165,7 +165,7 @@ document.getElementById('btn-generate').addEventListener('click', async function
     scoredCells = gridCells.map(cell => {
       const score = calculateScore(cell, userVariables, userWeights, userGroupWeights, currentBisnis);
       const center = turf.centerOfMass(cell);
-      const nearby = allPOIData.filter(p => turf.distance(center, p, {units:'km'}) < 0.5);
+      const nearby = allPOIData.filter(p => turf.distance(center, p, {units:'kilometers'}) < 0.5);
       const boost = Math.min(0.15, nearby.length * 0.02);
       cell.properties.score = Math.min(1, score + boost);
       cell.properties.nearby_pois = nearby.length;
