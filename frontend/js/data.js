@@ -17,6 +17,41 @@ async function fetchFromSupabase(endpoint, params = {}) {
   return res.json()
 }
 
+// Fetch ALL rows from Supabase with automatic pagination (1000 rows per page)
+async function fetchAllFromSupabase(endpoint, params = {}) {
+  const pageSize = 1000
+  let allData = []
+  let start = 0
+  let total = null
+
+  const query = typeof params === 'string' ? params : new URLSearchParams({...params, limit: pageSize.toString()}).toString()
+
+  while (total === null || start < total) {
+    const url = `${SUPABASE_URL}/rest/v1/${endpoint}?${query}`
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Range: `${start}-${start + pageSize - 1}`
+      }
+    })
+    if (!res.ok) throw new Error(`Supabase: ${res.status}`)
+    const data = await res.json()
+    allData = allData.concat(data)
+
+    if (data.length < pageSize) break // last page
+
+    start += pageSize
+    const contentRange = res.headers.get('content-range')
+    if (contentRange) {
+      const match = contentRange.match(/\/(\d+)/)
+      if (match) total = parseInt(match[1])
+    }
+  }
+
+  return allData
+}
+
 async function loadSpatialData() {
   return true
 }

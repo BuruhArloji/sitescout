@@ -584,10 +584,10 @@ async function loadRawPOILayer(categoryLabel) {
 }
 
 async function loadRawRoadLayer() {
-  // Ambil data jalan dari Supabase — tabel jakarta_roads
-  const rows = await fetchFromSupabase('jakarta_roads', {
+  // Ambil data jalan dari Supabase — tabel jakarta_roads (dengan pagination)
+  const rows = await fetchAllFromSupabase('jakarta_roads', {
     select: 'id,name,road_class,road_width,geom',
-    limit: '50000'
+    order: 'id.asc'
   });
 
   if (!rows || !rows.length) {
