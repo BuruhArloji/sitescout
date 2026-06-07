@@ -26,27 +26,38 @@ async function fetchAllFromSupabase(endpoint, params = {}) {
 
   const query = typeof params === 'string' ? params : new URLSearchParams({...params, limit: pageSize.toString()}).toString()
 
-  while (total === null || start < total) {
+  // Dapatkan total count dulu via query HEAD
+  const countUrl = `${SUPABASE_URL}/rest/v1/${endpoint}?select=count&limit=0`
+  const countRes = await fetch(countUrl, {
+    method: 'HEAD',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: 'count=exact'
+    }
+  })
+  const countHeader = countRes.headers.get('content-range')
+  if (countHeader) {
+    const m = countHeader.match(/\/(\d+)/)
+    if (m) total = parseInt(m[1])
+  }
+  // fallback kalo nggak dapet count
+  if (!total) total = 50000
+
+  while (start < total) {
     const url = `${SUPABASE_URL}/rest/v1/${endpoint}?${query}`
     const res = await fetch(url, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Range: `${start}-${start + pageSize - 1}`
+        Range: `${start}-${Math.min(start + pageSize - 1, total - 1)}`
       }
     })
     if (!res.ok) throw new Error(`Supabase: ${res.status}`)
     const data = await res.json()
     allData = allData.concat(data)
-
-    if (data.length < pageSize) break // last page
-
+    if (data.length < pageSize) break
     start += pageSize
-    const contentRange = res.headers.get('content-range')
-    if (contentRange) {
-      const match = contentRange.match(/\/(\d+)/)
-      if (match) total = parseInt(match[1])
-    }
   }
 
   return allData
