@@ -1063,3 +1063,296 @@ body {
 .leaflet-draw-toolbar a:hover {
   background: var(--surface-container-low) !important;
 }
+
+/* ================================================
+   Responsive — Mobile (HP)
+   ================================================ */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 300px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    min-height: auto;
+  }
+
+  .top-control select {
+    max-width: 160px;
+  }
+
+  .market-area-control {
+    max-width: 160px;
+  }
+
+  .topbar-actions .toolbar-btn {
+    padding: 0 8px;
+    font-size: 11px;
+    height: 28px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .brand-block h1 {
+    font-size: 14px;
+  }
+
+  .brand-block p {
+    font-size: 10px;
+  }
+
+  .stat-val {
+    font-size: 16px;
+  }
+}
+
+/* HP */
+@media (max-width: 768px) {
+  .app-shell {
+    height: 100dvh;
+  }
+
+  /* --- Topbar --- */
+  .topbar {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    position: relative;
+  }
+
+  .brand-block h1 {
+    font-size: 13px;
+  }
+
+  .brand-block p {
+    display: none;
+  }
+
+  .topbar-divider {
+    display: none;
+  }
+
+  .top-control label {
+    display: none;
+  }
+
+  .top-control select {
+    max-width: 120px;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  .market-area-control {
+    max-width: 100px;
+  }
+
+  .market-picker summary {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-top: 2px;
+    border-top: 1px solid var(--surface-container);
+  }
+
+  .topbar-actions .toolbar-btn {
+    font-size: 10px;
+    padding: 0 6px;
+    height: 26px;
+  }
+
+  /* --- Stats Bar --- */
+  .stats-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stat {
+    min-width: 80px;
+    padding: var(--space-2);
+  }
+
+  .stat-val {
+    font-size: 14px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  /* --- Workspace --- */
+  .workspace {
+    flex-direction: column;
+  }
+
+  /* Sidebar jadi bottom drawer */
+  .control-panel {
+    width: 100%;
+    min-width: 0;
+    max-height: 45vh;
+    border-right: none;
+    border-top: 1px solid var(--outline-variant);
+    order: 2;
+    position: relative;
+    z-index: 600;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .map-stage {
+    order: 1;
+    flex: 1;
+    min-height: 50vh;
+  }
+
+  .panel-section {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .intro-section h2 {
+    font-size: 17px;
+    line-height: 24px;
+  }
+
+  .intro-section {
+    display: none;
+  }
+
+  .section-header h3 {
+    font-size: 16px;
+  }
+
+  /* --- Layer Control --- */
+  .layer-control {
+    top: 8px;
+    right: 8px;
+    width: 180px;
+  }
+
+  .layer-control-body {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .layer-control-group label {
+    font-size: 11px;
+  }
+
+  /* --- Legend --- */
+  #legend {
+    bottom: 8px;
+    right: 8px;
+    padding: var(--space-2) var(--space-3);
+    min-width: 120px;
+  }
+
+  .legend-item {
+    font-size: 11px;
+  }
+
+  .legend-color {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* --- Modal --- */
+  .modal {
+    padding-top: 0;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 85vh;
+    padding: var(--space-6);
+    margin: 0;
+  }
+
+  .modal h2 {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  /* --- Map Overlay --- */
+  .map-overlay.top-left {
+    top: 8px;
+    left: 8px;
+  }
+
+  .map-title {
+    font-size: 13px;
+    padding: 3px 8px;
+  }
+
+  .map-kicker {
+    font-size: 9px;
+  }
+
+  /* --- Export buttons --- */
+  .btn-primary {
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .btn-secondary {
+    height: 34px;
+    font-size: 12px;
+  }
+
+  /* --- Variables --- */
+  .variable-item {
+    padding: var(--space-2);
+  }
+
+  .variable-item .range-row {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  /* Scrollable sidebar */
+  .control-panel {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* HP kecil */
+@media (max-width: 420px) {
+  .top-control select {
+    max-width: 90px;
+    font-size: 11px;
+  }
+
+  .market-area-control {
+    max-width: 80px;
+  }
+
+  .layer-control {
+    width: 160px;
+  }
+
+  .layer-control-body {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .stat-val {
+    font-size: 12px;
+  }
+
+  .stat {
+    min-width: 65px;
+    padding: var(--space-1);
+  }
+}
