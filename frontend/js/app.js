@@ -590,9 +590,9 @@ async function loadRawRoadLayer() {
   const west = bounds ? bounds.getWest() : fallback[0][1];
   const north = bounds ? bounds.getNorth() : fallback[1][0];
   const east = bounds ? bounds.getEast() : fallback[1][1];
-  const overpassQuery = `[out:json][timeout:25];
-way["highway"~"motorway|trunk|primary|secondary|tertiary"](${south},${west},${north},${east});
-out geom;`;
+
+  // Hanya jalan utama — motorway, trunk, primary biar cepat
+  const overpassQuery = `[out:json][timeout:20];\nway["highway"~"motorway|trunk|primary"](${south},${west},${north},${east});\nout geom;`;
 
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
