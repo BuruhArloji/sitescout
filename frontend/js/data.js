@@ -23,9 +23,9 @@ async function loadSpatialData() {
 
 async function loadPOIData(bounds, kategoriFilter = null) {
   const b = bounds
-  let query = `select=id,nama,kategori,latitude,longitude,rating,geom&order=kategori.asc`
+  let query = `select=id,nama,kategori,lat,lng,rating,geom&order=kategori.asc`
   if (b) {
-    query += `&and=(and(latitude.gte.${b[0][0]},latitude.lte.${b[1][0]},longitude.gte.${b[0][1]},longitude.lte.${b[1][1]}))`
+    query += `&and=(and(lat.gte.${b[0][0]},lat.lte.${b[1][0]},lng.gte.${b[0][1]},lng.lte.${b[1][1]}))`
   }
   if (kategoriFilter) {
     query += `&kategori=ilike.*${encodeURIComponent(kategoriFilter)}*`
@@ -91,14 +91,14 @@ async function loadZoningInBounds(bounds) {
 // Fetch all POI of a specific category in Jakarta bounds
 async function loadPOIByCategory(kategori) {
   const data = await fetchFromSupabase('jakarta_poi', {
-    select: 'id,nama,kategori,latitude,longitude',
+    select: 'id,nama,kategori,lat,lng',
     kategori: `ilike.*${kategori}*`,
     limit: '5000'
   })
   return data.map(d => ({
     type: 'Feature',
     properties: { id: d.id, nama: d.nama, kategori: d.kategori },
-    geometry: { type: 'Point', coordinates: [d.longitude, d.latitude] }
+    geometry: { type: 'Point', coordinates: [d.lng, d.lat] }
   }))
 }
 
@@ -106,8 +106,8 @@ async function loadPOIByCategory(kategori) {
 function countPOIPerCell(gridCells, poiFeatures, radiusKm = 0.5) {
   if (!poiFeatures || poiFeatures.length === 0) return gridCells
   const poiRows = poiFeatures.map(feature => ({
-    latitude: feature.geometry.coordinates[1],
-    longitude: feature.geometry.coordinates[0]
+    lat: feature.geometry.coordinates[1],
+    lng: feature.geometry.coordinates[0]
   }))
 
   return gridCells.map(cell => {
@@ -116,8 +116,8 @@ function countPOIPerCell(gridCells, poiFeatures, radiusKm = 0.5) {
     let minDist = Infinity
 
     for (const p of poiRows) {
-      if (pointInCell(p.latitude, p.longitude, cell)) poiCount++
-      const d = distanceKm(cell.properties.center_lat, cell.properties.center_lng, p.latitude, p.longitude)
+      if (pointInCell(p.lat, p.lng, cell)) poiCount++
+      const d = distanceKm(cell.properties.center_lat, cell.properties.center_lng, p.lat, p.lng)
       if (d <= radiusKm) poiNearby++
       if (d < minDist) minDist = d
     }

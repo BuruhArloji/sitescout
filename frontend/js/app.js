@@ -363,7 +363,7 @@ document.getElementById('btn-generate').addEventListener('click', async function
     this.textContent = 'Memuat POI...';
     const compCat = COMPETITOR_CATEGORY[currentBisnis] || currentBisnis;
     const [sw, ne] = selectedBounds;
-    const poiQuery = `select=id,kategori,latitude,longitude&kategori=ilike.*${encodeURIComponent(compCat)}*&and=(latitude.gte.${sw[0]},latitude.lte.${ne[0]},longitude.gte.${sw[1]},longitude.lte.${ne[1]})&limit=5000`;
+    const poiQuery = `select=id,kategori,lat,lng&kategori=ilike.*${encodeURIComponent(compCat)}*&and=(lat.gte.${sw[0]},lat.lte.${ne[0]},lng.gte.${sw[1]},lng.lte.${ne[1]})&limit=5000`;
     const poiResp = await fetchFromSupabase('jakarta_poi', poiQuery);
 
     this.textContent = 'Menghitung skor...';
@@ -557,13 +557,13 @@ function initLayerPanelCollapse() {
 
 async function loadRawPOILayer(categoryLabel) {
   const [sw, ne] = getSelectedAreaBounds();
-  const query = `select=id,nama,kategori,latitude,longitude&kategori=ilike.*${encodeURIComponent(categoryLabel)}*&and=(latitude.gte.${sw[0]},latitude.lte.${ne[0]},longitude.gte.${sw[1]},longitude.lte.${ne[1]})&limit=5000`;
+  const query = `select=id,nama,kategori,lat,lng&kategori=ilike.*${encodeURIComponent(categoryLabel)}*&and=(lat.gte.${sw[0]},lat.lte.${ne[0]},lng.gte.${sw[1]},lng.lte.${ne[1]})&limit=5000`;
   const rows = await fetchFromSupabase('jakarta_poi', query);
 
   const features = rows
     .map(row => {
-      const lat = Number(row.latitude);
-      const lng = Number(row.longitude);
+      const lat = Number(row.lat);
+      const lng = Number(row.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
       return {
         type: 'Feature',

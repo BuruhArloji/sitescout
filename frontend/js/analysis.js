@@ -97,8 +97,8 @@ function getGridCellId(lat, lng) {
 function enrichGridWithPOIMetrics(gridCells, poiRows) {
   const poiCoords = (poiRows || [])
     .map(row => ({
-      lat: Number(row.latitude),
-      lng: Number(row.longitude)
+      lat: Number(row.lat),
+      lng: Number(row.lng)
     }))
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
