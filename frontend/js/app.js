@@ -584,39 +584,29 @@ async function loadRawPOILayer(categoryLabel) {
 }
 
 async function loadRawRoadLayer() {
-  const bounds = map ? map.getBounds() : null;
-  const fallback = getSelectedAreaBounds();
-  const south = bounds ? bounds.getSouth() : fallback[0][0];
-  const west = bounds ? bounds.getWest() : fallback[0][1];
-  const north = bounds ? bounds.getNorth() : fallback[1][0];
-  const east = bounds ? bounds.getEast() : fallback[1][1];
+  // Ambil data jalan dari Supabase — tabel jakarta_roads
+  const rows = await fetchFromSupabase('jakarta_roads', {
+    select: 'id,name,road_class,road_width,geom',
+    limit: '50000'
+  });
 
-  const query = `[out:json][timeout:15];way["highway"~"motorway|trunk|primary"](${south},${west},${north},${east});out geom;`;
-
-  const res = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
-  if (!res.ok) throw new Error('Overpass: ' + res.status);
-  const payload = await res.json();
-  const elements = payload.elements || [];
-  if (elements.length === 0) {
+  if (!rows || !rows.length) {
     return { type: 'FeatureCollection', features: [] };
   }
-  const features = elements
-    .filter(el => Array.isArray(el.geom) && el.geom.length >= 2)
-    .map(element => {
-      const coordinates = element.geom.map(pt => [pt.lon, pt.lat]);
-      return {
-        type: 'Feature',
-        properties: {
-          id: element.id,
-          name: element.tags?.name || '',
-          highway: element.tags?.highway || 'road'
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates
-        }
-      };
-    });
+
+  const features = rows
+    .filter(row => row.geom && row.geom.type === 'LineString' && Array.isArray(row.geom.coordinates))
+    .map(row => ({
+      type: 'Feature',
+      properties: {
+        id: row.id,
+        name: row.name || '',
+        highway: row.road_class || 'jalan',
+        road_width: row.road_width || null
+      },
+      geometry: row.geom
+    }));
+
   return { type: 'FeatureCollection', features };
 }
 
