@@ -591,19 +591,18 @@ async function loadRawRoadLayer() {
   const north = bounds ? bounds.getNorth() : fallback[1][0];
   const east = bounds ? bounds.getEast() : fallback[1][1];
 
-  // Hanya jalan utama — motorway, trunk, primary biar cepat
-  const overpassQuery = `[out:json][timeout:20];\nway["highway"~"motorway|trunk|primary"](${south},${west},${north},${east});\nout geom;`;
+  const query = `[out:json][timeout:15];way["highway"~"motorway|trunk|primary"](${south},${west},${north},${east});out geom;`;
 
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: overpassQuery
-  });
-  if (!res.ok) throw new Error('Overpass API error: ' + res.status);
+  const res = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query));
+  if (!res.ok) throw new Error('Overpass: ' + res.status);
   const payload = await res.json();
-  const features = (payload.elements || [])
+  const elements = payload.elements || [];
+  if (elements.length === 0) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+  const features = elements
+    .filter(el => Array.isArray(el.geom) && el.geom.length >= 2)
     .map(element => {
-      if (!Array.isArray(element.geom) || element.geom.length < 2) return null;
       const coordinates = element.geom.map(pt => [pt.lon, pt.lat]);
       return {
         type: 'Feature',
@@ -617,8 +616,7 @@ async function loadRawRoadLayer() {
           coordinates
         }
       };
-    })
-    .filter(Boolean);
+    });
   return { type: 'FeatureCollection', features };
 }
 
