@@ -24,7 +24,9 @@ async function fetchAllFromSupabase(endpoint, params = {}) {
   let start = 0
   let total = null
 
-  const query = typeof params === 'string' ? params : new URLSearchParams({...params, limit: pageSize.toString()}).toString()
+  // Hapus 'limit' dari params — Range header yang handle pagination
+  const {limit: _, ...cleanParams} = params
+  const query = typeof params === 'string' ? params : new URLSearchParams(cleanParams).toString()
 
   // Dapatkan total count dulu via query HEAD
   const countUrl = `${SUPABASE_URL}/rest/v1/${endpoint}?select=count&limit=0`
